@@ -35,6 +35,7 @@ export interface ElementStyle {
   fill: string;
   opacity: number;
   borderRadius: number;
+  roughness: number; // 0 = straight/clean, 1+ = hand-drawn/sketchy
 }
 
 // Element types
@@ -45,6 +46,7 @@ export interface BaseElement extends ElementStyle {
   y1: number;
   x2: number;
   y2: number;
+  curvePoint?: Point; // Control point for curved lines/arrows
 }
 
 export interface PencilElement extends BaseElement {
@@ -73,6 +75,7 @@ export interface SelectedElement extends BaseElement {
   points?: Point[];
   text?: string;
   image?: string;
+  curvePoint?: Point;
 }
 
 // Translate state
@@ -110,7 +113,7 @@ export interface Dimension {
 }
 
 // Corner types for resize
-export type CornerSlug = 'tl' | 'tr' | 'bl' | 'br' | 'tt' | 'bb' | 'll' | 'rr' | 'l1' | 'l2';
+export type CornerSlug = 'tl' | 'tr' | 'bl' | 'br' | 'tt' | 'bb' | 'll' | 'rr' | 'l1' | 'l2' | 'l3';
 
 export interface Corner {
   slug: CornerSlug;

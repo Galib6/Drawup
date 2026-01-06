@@ -1,14 +1,14 @@
 import { v4 as uuid } from "uuid";
 import {
-    BoundingBox,
-    CreateElementParams,
-    DrawElement,
-    Point,
-    SelectedElement,
+  BoundingBox,
+  CreateElementParams,
+  DrawElement,
+  Point,
+  SelectedElement,
 } from "../types";
 import { distance } from "./canvas";
 
-const fileNameExtention = ".Draw Up";
+const fileNameExtention = ".drawup";
 
 function pointToSegmentDistance(
   px: number,
@@ -44,10 +44,28 @@ export function isWithinElement(
 ): boolean {
   let { tool, x1, y1, x2, y2, strokeWidth } = element;
   const points = 'points' in element ? element.points : [];
+  const curvePoint = 'curvePoint' in element ? element.curvePoint : undefined;
 
   switch (tool) {
     case "arrow":
     case "line": {
+      if (curvePoint) {
+        // For curved lines, sample points along the quadratic bezier curve
+        const threshold = Math.max(strokeWidth / 2 + 5, 8);
+        const numSamples = 20;
+        
+        for (let i = 0; i <= numSamples; i++) {
+          const t = i / numSamples;
+          // Quadratic bezier: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+          const px = (1-t)*(1-t)*x1 + 2*(1-t)*t*curvePoint.x + t*t*x2;
+          const py = (1-t)*(1-t)*y1 + 2*(1-t)*t*curvePoint.y + t*t*y2;
+          
+          const dist = Math.hypot(x - px, y - py);
+          if (dist < threshold) return true;
+        }
+        return false;
+      }
+      
       const a = { x: x1, y: y1 };
       const b = { x: x2, y: y2 };
       const c = { x, y };
@@ -193,12 +211,22 @@ export function moveElement(
   factorX: number,
   factorY: number | null = null
 ): DrawElement {
+  const curvePoint = 'curvePoint' in element && element.curvePoint
+    ? { 
+        curvePoint: { 
+          x: element.curvePoint.x + factorX, 
+          y: element.curvePoint.y + (factorY ?? factorX) 
+        } 
+      }
+    : {};
+    
   return {
     ...element,
     x1: element.x1 + factorX,
     y1: element.y1 + (factorY ?? factorX),
     x2: element.x2 + factorX,
     y2: element.y2 + (factorY ?? factorX),
+    ...curvePoint,
   };
 }
 
@@ -382,6 +410,8 @@ export function resizeValue(
       return { x1: x, y1: y };
     case "l2":
       return { x2: x, y2: y };
+    case "l3":
+      return { curvePoint: { x, y } };
     default:
       return {};
   }

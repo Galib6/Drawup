@@ -1,31 +1,31 @@
 import { createContext, FC, ReactNode, useContext, useEffect, useState } from "react";
 import { socket } from "../api/socket";
 import {
-    Arrow,
-    Circle,
-    Diamond,
-    Hand,
-    Image,
-    Line,
-    Lock,
-    Pencil,
-    Rectangle,
-    Selection,
-    Text,
+  Arrow,
+  Circle,
+  Diamond,
+  Hand,
+  Image,
+  Line,
+  Lock,
+  Pencil,
+  Rectangle,
+  Selection,
+  Text,
 } from "../assets/icons";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import { getElementById, minmax } from "../helper/element";
 import useHistory from "../hooks/useHistory";
 import {
-    ActionType,
-    AppContextType,
-    DrawElement,
-    ElementStyle,
-    ScaleOffset,
-    SelectedElement,
-    Tool,
-    ToolSlug,
-    TranslateState,
+  ActionType,
+  AppContextType,
+  DrawElement,
+  ElementStyle,
+  ScaleOffset,
+  SelectedElement,
+  Tool,
+  ToolSlug,
+  TranslateState,
 } from "../types";
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -51,6 +51,7 @@ const defaultStyle: ElementStyle = {
   fill: BACKGROUND_COLORS[0],
   opacity: 100,
   borderRadius: 0,
+  roughness: 1, // 0 = straight, 1 = hand-drawn
 };
 
 const isElementsInLocal = (): DrawElement[] => {

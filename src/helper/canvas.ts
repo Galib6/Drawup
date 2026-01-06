@@ -18,43 +18,154 @@ interface ShapeParams {
   strokeWidth?: number;
   image?: string;
   text?: string;
+  curvePoint?: Point;
+  roughness?: number;
 }
 
 type ShapeFunction = (params: ShapeParams, ctx: CanvasRenderingContext2D) => void;
 
 export const shapes: Record<string, ShapeFunction> = {
-  arrow: ({ x1, y1, x2, y2 }, ctx) => {
-    const headlen = 5;
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(
-      x2 - headlen * Math.cos(angle - Math.PI / 7),
-      y2 - headlen * Math.sin(angle - Math.PI / 7)
-    );
-
-    ctx.lineTo(
-      x2 - headlen * Math.cos(angle + Math.PI / 7),
-      y2 - headlen * Math.sin(angle + Math.PI / 7)
-    );
-
-    ctx.lineTo(x2, y2);
-    ctx.lineTo(
-      x2 - headlen * Math.cos(angle - Math.PI / 7),
-      y2 - headlen * Math.sin(angle - Math.PI / 7)
-    );
-  },
-
-  line: ({ x1, y1, x2, y2 }, ctx) => {
+  arrow: ({ x1, y1, x2, y2, curvePoint, strokeWidth = 3, roughness = 1 }, ctx) => {
+    // Scale arrow head based on stroke width
+    const headlen = Math.max(10, strokeWidth * 3);
+    
+    // Seed based on coordinates for consistent wobble
+    const seed = (x1 * 1000 + y1 * 100 + x2 * 10 + y2) % 1000;
+    const random = (i: number) => {
+      const x = Math.sin(seed + i * 9999) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    // Roughness factor - 0 means straight lines
+    const roughFactor = roughness * Math.min(strokeWidth * 0.4, 3);
+    
+    // Calculate perpendicular direction for wobble
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const perpX = -dy / len;
+    const perpY = dx / len;
+    
     ctx.beginPath();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
+    
+    let angle: number;
+    
+    if (curvePoint) {
+      // Curved arrow with optional wobble on control point
+      const wobbledCurve = {
+        x: curvePoint.x + (random(0) - 0.5) * roughFactor * 2,
+        y: curvePoint.y + (random(1) - 0.5) * roughFactor * 2
+      };
+      ctx.quadraticCurveTo(wobbledCurve.x, wobbledCurve.y, x2, y2);
+      
+      // Calculate angle at the end point (tangent of curve at end)
+      angle = Math.atan2(y2 - curvePoint.y, x2 - curvePoint.x);
+    } else if (roughness > 0) {
+      // Hand-drawn straight arrow with natural wobble
+      const distance = Math.hypot(x2 - x1, y2 - y1);
+      const segments = Math.max(Math.floor(distance / 15), 3);
+      
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const baseX = x1 + (x2 - x1) * t;
+        const baseY = y1 + (y2 - y1) * t;
+        
+        // Add wobble perpendicular to line direction (less at endpoints)
+        const wobbleAmount = roughFactor * Math.sin(t * Math.PI) * (random(i) - 0.5) * 2;
+        const px = baseX + perpX * wobbleAmount;
+        const py = baseY + perpY * wobbleAmount;
+        
+        if (i === segments) {
+          ctx.lineTo(x2, y2);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      
+      angle = Math.atan2(y2 - y1, x2 - x1);
+    } else {
+      // Straight clean arrow
+      ctx.lineTo(x2, y2);
+      angle = Math.atan2(y2 - y1, x2 - x1);
+    }
+    
+    // Draw arrow head with optional variation
+    const headWobble1 = (random(10) - 0.5) * roughFactor * 0.5;
+    const headWobble2 = (random(11) - 0.5) * roughFactor * 0.5;
+    
+    const arrowX1 = x2 - headlen * Math.cos(angle - Math.PI / 7);
+    const arrowY1 = y2 - headlen * Math.sin(angle - Math.PI / 7);
+    const arrowX2 = x2 - headlen * Math.cos(angle + Math.PI / 7);
+    const arrowY2 = y2 - headlen * Math.sin(angle + Math.PI / 7);
+    
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(arrowX1 + headWobble1, arrowY1 + headWobble1);
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(arrowX2 + headWobble2, arrowY2 + headWobble2);
   },
 
-  rectangle: ({ x1, y1, x2, y2, borderRadius = 0 }, ctx) => {
+  line: ({ x1, y1, x2, y2, curvePoint, strokeWidth = 3, roughness = 1 }, ctx) => {
+    ctx.beginPath();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    
+    // Roughness factor - 0 means straight lines
+    const roughFactor = roughness * Math.min(strokeWidth * 0.4, 3);
+    
+    // Seed based on coordinates for consistent wobble
+    const seed = (x1 * 1000 + y1 * 100 + x2 * 10 + y2) % 1000;
+    const random = (i: number) => {
+      const x = Math.sin(seed + i * 9999) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    // Calculate perpendicular direction for wobble
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy) || 1;
+    const perpX = -dy / len;
+    const perpY = dx / len;
+    
+    ctx.moveTo(x1, y1);
+    
+    if (curvePoint) {
+      // Curved line with optional wobble
+      const wobbledCurve = {
+        x: curvePoint.x + (random(0) - 0.5) * roughFactor * 2,
+        y: curvePoint.y + (random(1) - 0.5) * roughFactor * 2
+      };
+      ctx.quadraticCurveTo(wobbledCurve.x, wobbledCurve.y, x2, y2);
+    } else if (roughness > 0) {
+      // Hand-drawn straight line with natural wobble
+      const distance = Math.hypot(x2 - x1, y2 - y1);
+      const segments = Math.max(Math.floor(distance / 15), 3);
+      
+      for (let i = 1; i <= segments; i++) {
+        const t = i / segments;
+        const baseX = x1 + (x2 - x1) * t;
+        const baseY = y1 + (y2 - y1) * t;
+        
+        // Add wobble perpendicular to line direction (less at endpoints)
+        const wobbleAmount = roughFactor * Math.sin(t * Math.PI) * (random(i) - 0.5) * 2;
+        const px = baseX + perpX * wobbleAmount;
+        const py = baseY + perpY * wobbleAmount;
+        
+        if (i === segments) {
+          ctx.lineTo(x2, y2); // End exactly at endpoint
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+    } else {
+      // Straight clean line
+      ctx.lineTo(x2, y2);
+    }
+  },
+
+  rectangle: ({ x1, y1, x2, y2, borderRadius = 0, strokeWidth = 3, roughness = 1 }, ctx) => {
     const left = Math.min(x1, x2);
     const right = Math.max(x1, x2);
     const top = Math.min(y1, y2);
@@ -64,44 +175,179 @@ export const shapes: Record<string, ShapeFunction> = {
     const height = bottom - top;
 
     const r = Math.min(borderRadius, width / 2, height / 2);
-
+    
+    // Roughness factor - 0 means straight lines
+    const roughFactor = roughness * Math.min(strokeWidth * 0.3, 2);
+    
+    // Seed for consistent wobble
+    const seed = (x1 * 1000 + y1 * 100 + x2 * 10 + y2) % 1000;
+    const random = (i: number) => {
+      const x = Math.sin(seed + i * 9999) * 10000;
+      return x - Math.floor(x);
+    };
+    
     ctx.beginPath();
-    ctx.moveTo(left + r, top); // top-left
-    ctx.lineTo(right - r, top);
-    ctx.quadraticCurveTo(right, top, right, top + r);
-    ctx.lineTo(right, bottom - r);
-    ctx.quadraticCurveTo(right, bottom, right - r, bottom); // bottom-right
-    ctx.lineTo(left + r, bottom);
-    ctx.quadraticCurveTo(left, bottom, left, bottom - r); // bottom-left
-    ctx.lineTo(left, top + r);
-    ctx.quadraticCurveTo(left, top, left + r, top); // back to top-left
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    
+    if (roughness > 0 && r === 0) {
+      // Hand-drawn rectangle without border radius
+      const drawWobblyLine = (sx: number, sy: number, ex: number, ey: number, seedOffset: number) => {
+        const dist = Math.hypot(ex - sx, ey - sy);
+        const segments = Math.max(Math.floor(dist / 20), 2);
+        const dx = ex - sx;
+        const dy = ey - sy;
+        const len = Math.hypot(dx, dy) || 1;
+        const perpX = -dy / len;
+        const perpY = dx / len;
+        
+        for (let i = 0; i <= segments; i++) {
+          const t = i / segments;
+          const baseX = sx + (ex - sx) * t;
+          const baseY = sy + (ey - sy) * t;
+          const wobble = roughFactor * Math.sin(t * Math.PI) * (random(seedOffset + i) - 0.5) * 2;
+          
+          if (i === 0) {
+            ctx.moveTo(baseX + perpX * wobble, baseY + perpY * wobble);
+          } else {
+            ctx.lineTo(baseX + perpX * wobble, baseY + perpY * wobble);
+          }
+        }
+      };
+      
+      // Draw 4 sides with wobble
+      drawWobblyLine(left, top, right, top, 0);      // top
+      drawWobblyLine(right, top, right, bottom, 10); // right
+      drawWobblyLine(right, bottom, left, bottom, 20); // bottom
+      drawWobblyLine(left, bottom, left, top, 30);   // left
+      ctx.closePath();
+    } else {
+      // Clean rectangle or with border radius
+      ctx.moveTo(left + r, top);
+      ctx.lineTo(right - r, top);
+      ctx.quadraticCurveTo(right, top, right, top + r);
+      ctx.lineTo(right, bottom - r);
+      ctx.quadraticCurveTo(right, bottom, right - r, bottom);
+      ctx.lineTo(left + r, bottom);
+      ctx.quadraticCurveTo(left, bottom, left, bottom - r);
+      ctx.lineTo(left, top + r);
+      ctx.quadraticCurveTo(left, top, left + r, top);
+      ctx.closePath();
+    }
+  },
+
+  diamond: ({ x1, y1, x2, y2, strokeWidth = 3, roughness = 1 }, ctx) => {
+    const width = x2 - x1;
+    const height = y2 - y1;
+    
+    const midX = x1 + width / 2;
+    const midY = y1 + height / 2;
+    const topPoint = { x: midX, y: y1 };
+    const rightPoint = { x: x2, y: midY };
+    const bottomPoint = { x: midX, y: y2 };
+    const leftPoint = { x: x1, y: midY };
+    
+    // Roughness factor
+    const roughFactor = roughness * Math.min(strokeWidth * 0.3, 2);
+    
+    // Seed for consistent wobble
+    const seed = (x1 * 1000 + y1 * 100 + x2 * 10 + y2) % 1000;
+    const random = (i: number) => {
+      const x = Math.sin(seed + i * 9999) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    ctx.beginPath();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    
+    if (roughness > 0) {
+      // Hand-drawn diamond
+      const drawWobblyLine = (sx: number, sy: number, ex: number, ey: number, seedOffset: number, isFirst: boolean) => {
+        const dist = Math.hypot(ex - sx, ey - sy);
+        const segments = Math.max(Math.floor(dist / 20), 2);
+        const dx = ex - sx;
+        const dy = ey - sy;
+        const len = Math.hypot(dx, dy) || 1;
+        const perpX = -dy / len;
+        const perpY = dx / len;
+        
+        for (let i = 0; i <= segments; i++) {
+          const t = i / segments;
+          const baseX = sx + (ex - sx) * t;
+          const baseY = sy + (ey - sy) * t;
+          const wobble = roughFactor * Math.sin(t * Math.PI) * (random(seedOffset + i) - 0.5) * 2;
+          
+          if (i === 0 && isFirst) {
+            ctx.moveTo(baseX + perpX * wobble, baseY + perpY * wobble);
+          } else {
+            ctx.lineTo(baseX + perpX * wobble, baseY + perpY * wobble);
+          }
+        }
+      };
+      
+      drawWobblyLine(topPoint.x, topPoint.y, rightPoint.x, rightPoint.y, 0, true);
+      drawWobblyLine(rightPoint.x, rightPoint.y, bottomPoint.x, bottomPoint.y, 10, false);
+      drawWobblyLine(bottomPoint.x, bottomPoint.y, leftPoint.x, leftPoint.y, 20, false);
+      drawWobblyLine(leftPoint.x, leftPoint.y, topPoint.x, topPoint.y, 30, false);
+    } else {
+      // Clean diamond
+      ctx.moveTo(topPoint.x, topPoint.y);
+      ctx.lineTo(rightPoint.x, rightPoint.y);
+      ctx.lineTo(bottomPoint.x, bottomPoint.y);
+      ctx.lineTo(leftPoint.x, leftPoint.y);
+    }
     ctx.closePath();
   },
 
-  diamond: ({ x1, y1, x2, y2 }, ctx) => {
-    ctx.beginPath();
+  circle: ({ x1, y1, x2, y2, strokeWidth = 3, roughness = 1 }, ctx) => {
     const width = x2 - x1;
     const height = y2 - y1;
-    ctx.moveTo(x1 + width / 2, y1);
-    ctx.lineTo(x2, y1 + height / 2);
-    ctx.lineTo(x1 + width / 2, y2);
-    ctx.lineTo(x1, y1 + height / 2);
-    ctx.closePath();
-  },
-
-  circle: ({ x1, y1, x2, y2 }, ctx) => {
+    const centerX = x1 + width / 2;
+    const centerY = y1 + height / 2;
+    const radiusX = Math.abs(width) / 2;
+    const radiusY = Math.abs(height) / 2;
+    
+    // Roughness factor
+    const roughFactor = roughness * Math.min(strokeWidth * 0.25, 2);
+    
+    // Seed for consistent wobble
+    const seed = (x1 * 1000 + y1 * 100 + x2 * 10 + y2) % 1000;
+    const random = (i: number) => {
+      const x = Math.sin(seed + i * 9999) * 10000;
+      return x - Math.floor(x);
+    };
+    
     ctx.beginPath();
-    const width = x2 - x1;
-    const height = y2 - y1;
-    ctx.ellipse(
-      x1 + width / 2,
-      y1 + height / 2,
-      Math.abs(width) / 2,
-      Math.abs(height) / 2,
-      0,
-      0,
-      2 * Math.PI
-    );
+    
+    if (roughness > 0) {
+      // Hand-drawn ellipse/circle
+      const segments = 36; // More segments for smoother circle
+      
+      for (let i = 0; i <= segments; i++) {
+        const angle = (i / segments) * Math.PI * 2;
+        const wobble = roughFactor * (random(i) - 0.5) * 2;
+        const px = centerX + (radiusX + wobble) * Math.cos(angle);
+        const py = centerY + (radiusY + wobble) * Math.sin(angle);
+        
+        if (i === 0) {
+          ctx.moveTo(px, py);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+    } else {
+      // Clean ellipse
+      ctx.ellipse(
+        centerX,
+        centerY,
+        radiusX,
+        radiusY,
+        0,
+        0,
+        2 * Math.PI
+      );
+    }
     ctx.closePath();
   },
 
@@ -204,6 +450,11 @@ export function getFocuseCorners(
   const { fx, fy, fw, fh } = getFocuseDemention(element, padding);
 
   if (element.tool === "line" || element.tool === "arrow") {
+    // Get curve point or calculate default midpoint
+    const curvePoint = 'curvePoint' in element && element.curvePoint 
+      ? element.curvePoint 
+      : { x: (fx + fw) / 2, y: (fy + fh) / 2 };
+    
     return {
       line: { fx, fy, fw, fh },
       corners: [
@@ -211,6 +462,11 @@ export function getFocuseCorners(
           slug: "l1",
           x: fx - position,
           y: fy - position,
+        },
+        {
+          slug: "l3",
+          x: curvePoint.x - position,
+          y: curvePoint.y - position,
         },
         {
           slug: "l2",
@@ -344,6 +600,9 @@ export function draw(
   if ('text' in element) {
     shapeParams.text = element.text;
   }
+  if ('curvePoint' in element) {
+    shapeParams.curvePoint = element.curvePoint;
+  }
 
   shapes[tool](shapeParams, context);
   context.fill();
@@ -396,6 +655,8 @@ export function cornerCursor(corner: string): string {
     case "l1":
     case "l2":
       return "pointer";
+    case "l3":
+      return "move";
     default:
       return "default";
   }

@@ -1,19 +1,19 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import {
-    Backward,
-    Delete,
-    Duplicate,
-    Forward,
-    ToBack,
-    ToFront,
+  Backward,
+  Delete,
+  Duplicate,
+  Forward,
+  ToBack,
+  ToFront,
 } from "../assets/icons";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import {
-    deleteElement,
-    duplicateElement,
-    minmax,
-    moveElementLayer,
-    updateElement,
+  deleteElement,
+  duplicateElement,
+  minmax,
+  moveElementLayer,
+  updateElement,
 } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
 import { DrawElement, ElementStyle, SelectedElement } from "../types";
@@ -25,6 +25,7 @@ interface ElementStyleState {
   strokeColor: string | undefined;
   opacity: number | undefined;
   borderRadius: number | undefined;
+  roughness: number | undefined;
 }
 
 interface StyleProps {
@@ -41,6 +42,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
     strokeColor: selectedElement?.strokeColor,
     opacity: selectedElement?.opacity,
     borderRadius: selectedElement?.borderRadius,
+    roughness: selectedElement?.roughness,
   });
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
       strokeColor: selectedElement?.strokeColor,
       opacity: selectedElement?.opacity,
       borderRadius: selectedElement?.borderRadius,
+      roughness: selectedElement?.roughness,
     });
   }, [selectedElement]);
 
@@ -188,6 +191,63 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               <style.icon />
             </button>
           ))}
+        </div>
+      </div>
+      <div className="group edgeStyle">
+        <p>Edge</p>
+        <div className="innerGroup">
+          <button
+            type="button"
+            title="Straight (Architect)"
+            className={
+              "itemButton option" +
+              ((elementStyle.roughness ?? 1) === 0 ? " selected" : "")
+            }
+            onClick={() => {
+              setStylesStates({ roughness: 0 });
+              if (selectedId) {
+                updateElement(
+                  selectedId,
+                  { roughness: 0 },
+                  setElements as (
+                    action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                    overwrite?: boolean
+                  ) => void,
+                  elements
+                );
+              }
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <line x1="2" y1="18" x2="18" y2="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            title="Hand-drawn (Artist)"
+            className={
+              "itemButton option" +
+              ((elementStyle.roughness ?? 1) > 0 ? " selected" : "")
+            }
+            onClick={() => {
+              setStylesStates({ roughness: 1 });
+              if (selectedId) {
+                updateElement(
+                  selectedId,
+                  { roughness: 1 },
+                  setElements as (
+                    action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                    overwrite?: boolean
+                  ) => void,
+                  elements
+                );
+              }
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <path d="M2 18 Q6 14 8 15 Q10 16 12 13 Q14 10 18 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
       </div>
       <div className="group opacity">

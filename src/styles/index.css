@@ -79,7 +79,7 @@ main.ui footer > div {
   gap: 10px;
 }
 
-html::before {
+/* html::before {
   content: "";
   position: absolute;
   top: 50%;
@@ -100,7 +100,7 @@ html::after {
   height: 100%;
   pointer-events: none;
   z-index: -1;
-}
+} */
 
 section,
 .sectionStyle {

@@ -1,37 +1,37 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-    cornerCursor,
-    draw,
-    drawFocuse,
-    imageCache,
-    inSelectedCorner,
+  cornerCursor,
+  draw,
+  drawFocuse,
+  imageCache,
+  inSelectedCorner,
 } from "../helper/canvas";
 import { lockUI } from "../helper/ui";
 import { useAppContext } from "../provider/AppStates";
 import useDimension from "./useDimension";
 
 import {
-    adjustCoordinates,
-    arrowMove,
-    createElement,
-    deleteElement,
-    duplicateElement,
-    getElementById,
-    getElementPosition,
-    minmax,
-    resizeValue,
-    saveElements,
-    updateElement,
-    uploadElements,
+  adjustCoordinates,
+  arrowMove,
+  createElement,
+  deleteElement,
+  duplicateElement,
+  getElementById,
+  getElementPosition,
+  minmax,
+  resizeValue,
+  saveElements,
+  updateElement,
+  uploadElements,
 } from "../helper/element";
 import {
-    BoundingBox,
-    Corner,
-    DrawElement,
-    MouseAction,
-    Point,
-    SelectedElement,
-    UseCanvasReturn,
+  BoundingBox,
+  Corner,
+  DrawElement,
+  MouseAction,
+  Point,
+  SelectedElement,
+  UseCanvasReturn,
 } from "../types";
 import useKeys from "./useKeys";
 import useTextArea from "./useTextArea";
@@ -268,12 +268,16 @@ export default function useCanvas(): UseCanvasReturn {
         lastPosY = 0,
       } = selectedElement;
       const points = "points" in selectedElement ? selectedElement.points : [];
+      const curvePoint = "curvePoint" in selectedElement ? selectedElement.curvePoint : undefined;
 
       const width = x2 - x1;
       const height = y2 - y1;
 
       const nx = clientX - offsetX;
       const ny = clientY - offsetY;
+
+      const deltaX = clientX - lastPosX;
+      const deltaY = clientY - lastPosY;
 
       let newStateOptions: Partial<DrawElement> = {
         x1: nx,
@@ -283,13 +287,18 @@ export default function useCanvas(): UseCanvasReturn {
       };
 
       if (tool === "pencil" && points) {
-        const deltaX = clientX - lastPosX;
-        const deltaY = clientY - lastPosY;
-
         (newStateOptions as { points: Point[] }).points = points.map((p) => ({
           x: p.x + deltaX,
           y: p.y + deltaY,
         }));
+      }
+
+      // Move curve control point along with the element
+      if ((tool === "arrow" || tool === "line") && curvePoint) {
+        (newStateOptions as { curvePoint: Point }).curvePoint = {
+          x: curvePoint.x + deltaX,
+          y: curvePoint.y + deltaY,
+        };
       }
 
       updateElement(
