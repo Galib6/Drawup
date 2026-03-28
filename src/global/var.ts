@@ -8,6 +8,7 @@ export const BACKGROUND_COLORS: string[] = [
   "rgb(178, 242, 187)",
   "rgb(165, 216, 255)",
   "rgb(255, 236, 153)",
+  "rgb(255, 255, 255)",
 ];
 
 export const STROKE_COLORS: string[] = [
@@ -16,6 +17,7 @@ export const STROKE_COLORS: string[] = [
   "rgb(47, 158, 68)",
   "rgb(25, 113, 194)",
   "rgb(240, 140, 0)",
+  "rgb(73, 80, 87)",
 ];
 
 export const STROKE_STYLES: StrokeStyleDef[] = [

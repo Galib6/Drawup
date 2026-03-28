@@ -142,114 +142,145 @@ export const Lock = (): JSX.Element => (
 
 export const SolidLine = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
     height={demention}
-    fill="currentColor"
+    viewBox="0 0 24 24"
+    fill="none"
     stroke="currentColor"
-    strokeWidth="29.066"
-    version="1.1"
-    viewBox="-29.07 -29.07 348.8 348.8"
-    xmlSpace="preserve"
+    strokeLinecap="round"
+    strokeWidth={2.5}
   >
-    <path fill="currentColor" d="M0 139.474H290.658V151.185H0z"></path>
+    <line x1="3" y1="12" x2="21" y2="12" />
   </svg>
 );
 
 export const DashedLine = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 17 17"
     height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeWidth={2}
   >
-    <path
-      fill="currentColor"
-      d="M0 8h4v1H0V8zm6.5 1h4V8h-4v1zM13 8v1h4V8h-4z"
-    ></path>
+    <line x1="3" y1="12" x2="7" y2="12" />
+    <line x1="10" y1="12" x2="14" y2="12" />
+    <line x1="17" y1="12" x2="21" y2="12" />
   </svg>
 );
 
 export const DottedLine = (): JSX.Element => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    height={demention}
-    fill="currentColor"
-    viewBox="0 0 24 24"
-  >
-    <path d="M3 13H1v-2h2zm4-2H5v2h2zm12 0h-2v2h2zm4 0h-2v2h2zm-12 0H9v2h2zm4 0h-2v2h2z"></path>
+  <svg height={demention} viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="5" cy="12" r="1.35" />
+    <circle cx="10" cy="12" r="1.35" />
+    <circle cx="15" cy="12" r="1.35" />
+    <circle cx="20" cy="12" r="1.35" />
   </svg>
 );
 
 export const Duplicate = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="30 30 205 205"
     height={demention}
-    fill="currentColor"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
   >
-    <path d="M47.81 91.725c0-8.328 6.539-15.315 15.568-15.33 9.03-.016 14.863.015 14.863.015s-.388-8.9-.388-15.978c0-7.08 6.227-14.165 15.262-14.165s92.802-.26 101.297.37c8.495.63 15.256 5.973 15.256 14.567 0 8.594-.054 93.807-.054 101.7 0 7.892-7.08 15.063-15.858 15.162-8.778.1-14.727-.1-14.727-.1s.323 9.97.323 16.094c0 6.123-7.12 15.016-15.474 15.016s-93.117.542-101.205.542c-8.088 0-15.552-7.116-15.207-15.987.345-8.871.345-93.58.345-101.906zm46.06-28.487l-.068 98.164c0 1.096.894 1.99 1.999 1.984l95.555-.51a2.007 2.007 0 001.998-2.01l-.064-97.283a2.01 2.01 0 00-2.01-2.007l-95.4-.326a1.99 1.99 0 00-2.01 1.988zM63.268 95.795l.916 96.246a2.007 2.007 0 002.02 1.982l94.125-.715a3.976 3.976 0 003.953-4.026l-.137-11.137s-62.877.578-71.054.578-15.438-7.74-15.438-16.45c0-8.71.588-68.7.588-68.7.01-1.1-.874-1.99-1.976-1.975l-9.027.13a4.025 4.025 0 00-3.97 4.067z"></path>
+    <rect x="9" y="9" width="11" height="11" rx="2" />
+    <rect x="4" y="4" width="11" height="11" rx="2" />
   </svg>
 );
 
 export const Delete = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
     height={demention}
-    viewBox="1 1 22 22"
+    viewBox="0 0 24 24"
     stroke="currentColor"
     fill="none"
     strokeLinecap="round"
     strokeLinejoin="round"
-    strokeWidth="2"
+    strokeWidth={2}
   >
-    <path d="M10 12v5M14 12v5M4 7h16M6 10v8a3 3 0 003 3h6a3 3 0 003-3v-8M9 5a2 2 0 012-2h2a2 2 0 012 2v2H9V5z"></path>
+    <path d="M3 6h18" />
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+    <path d="M10 11v6M14 11v6" />
   </svg>
 );
 
 export const Backward = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
     height={demention}
-    fill="currentColor"
-    enableBackground="new 0 0 512 512"
-    viewBox="0 0 512 512"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
   >
-    <path d="M371.2 115.2H224c-60.09 0-108.8 48.71-108.8 108.8v147.2h-32C37.25 371.2 0 333.95 0 288V83.2C0 37.25 37.25 0 83.2 0H288c45.95 0 83.2 37.25 83.2 83.2v32zM512 428.8c0 45.95-37.25 83.2-83.2 83.2H224c-45.95 0-83.2-37.25-83.2-83.2V224c0-45.95 37.25-83.2 83.2-83.2h204.8c45.95 0 83.2 37.25 83.2 83.2v204.8zm-83.2 44.8c24.74 0 44.8-20.06 44.8-44.8V224c0-24.74-20.06-44.8-44.8-44.8H224c-24.74 0-44.8 20.06-44.8 44.8v204.8c0 24.74 20.06 44.8 44.8 44.8h204.8z"></path>
+    <path d="M12 5v14M8 13l4 4 4-4" />
   </svg>
 );
 
 export const Forward = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
     height={demention}
-    fill="currentColor"
-    enableBackground="new 0 0 512 512"
-    viewBox="0 0 512 512"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
   >
-    <path d="M288 371.2c45.95 0 83.2-37.25 83.2-83.2V83.2C371.2 37.25 333.95 0 288 0H83.2C37.25 0 0 37.25 0 83.2V288c0 45.95 37.25 83.2 83.2 83.2H288zm-147.2 25.6h38.4v32c0 24.74 20.06 44.8 44.8 44.8h204.8c24.74 0 44.8-20.06 44.8-44.8V224c0-24.74-20.06-44.8-44.8-44.8h-32v-38.4h32c45.95 0 83.2 37.25 83.2 83.2v204.8c0 45.95-37.25 83.2-83.2 83.2H224c-45.95 0-83.2-37.25-83.2-83.2v-32z"></path>
+    <path d="M12 19V5M8 11l4-4 4 4" />
   </svg>
 );
 
 export const ToBack = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    enableBackground="new 0 0 512 512"
-    viewBox="0 0 512 512"
     height={demention}
-    fill="currentColor"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
   >
-    <path d="M116.36 232.73h29.09c48.2 0 87.27-39.07 87.27-87.27v-29.09H320c41.77 0 75.64 33.86 75.64 75.64v87.27h-29.09c-48.2 0-87.27 39.07-87.27 87.27v29.09H192c-41.77 0-75.64-33.86-75.64-75.64v-87.27zM0 64C0 28.65 28.65 0 64 0h81.45c35.35 0 64 28.65 64 64v81.45c0 35.35-28.65 64-64 64H64c-35.35 0-64-28.65-64-64V64zm64-29.09c-16.07 0-29.09 13.02-29.09 29.09v81.45c0 16.07 13.02 29.09 29.09 29.09h81.45c16.07 0 29.09-13.02 29.09-29.09V64c0-16.07-13.02-29.09-29.09-29.09H64zm238.55 331.64c0-35.35 28.65-64 64-64H448c35.35 0 64 28.65 64 64V448c0 35.35-28.65 64-64 64h-81.45c-35.35 0-64-28.65-64-64v-81.45zm64-29.1c-16.07 0-29.09 13.02-29.09 29.09V448c0 16.07 13.02 29.09 29.09 29.09H448c16.07 0 29.09-13.02 29.09-29.09v-81.45c0-16.07-13.02-29.09-29.09-29.09h-81.45z"></path>
+    <path d="M4 20h16" />
+    <path d="M12 4v10M8 10l4 4 4-4" />
   </svg>
 );
 
 export const ToFront = (): JSX.Element => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
     height={demention}
-    fill="currentColor"
-    enableBackground="new 0 0 512 512"
-    viewBox="0 0 512 512"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
   >
-    <path d="M0 64C0 28.65 28.65 0 64 0h81.45c35.35 0 64 28.65 64 64v29.09H192c-5.96 0-11.79.53-17.45 1.54V64c0-16.07-13.02-29.09-29.09-29.09H64c-16.07 0-29.09 13.02-29.09 29.09v81.45c0 16.07 13.02 29.09 29.09 29.09h30.63a99.43 99.43 0 00-1.54 17.45v17.45H64c-35.35 0-64-28.65-64-64V64zm302.55 354.91V448c0 35.35 28.65 64 64 64H448c35.35 0 64-28.65 64-64v-81.45c0-35.35-28.65-64-64-64h-29.09V320c0 5.96-.53 11.79-1.54 17.45H448c16.07 0 29.09 13.02 29.09 29.09V448c0 16.07-13.02 29.09-29.09 29.09h-81.45c-16.07 0-29.09-13.02-29.09-29.09v-30.63a99.43 99.43 0 01-17.45 1.54h-17.46zM116.36 192c0-41.77 33.86-75.64 75.64-75.64h128c41.77 0 75.64 33.86 75.64 75.64v128c0 41.77-33.86 75.64-75.64 75.64H192c-41.77 0-75.64-33.86-75.64-75.64V192z"></path>
+    <path d="M4 4h16" />
+    <path d="M12 20V10M8 14l4-4 4 4" />
+  </svg>
+);
+
+export const Link = (): JSX.Element => (
+  <svg
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  >
+    <g transform="rotate(-38 12 12)">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </g>
   </svg>
 );
 
@@ -366,5 +397,88 @@ export const Github = (): JSX.Element => (
   >
     <path d="M16.25 22.5v-3.865a3.361 3.361 0 0 0-.94-2.607c3.14-.35 6.44-1.538 6.44-6.99a5.43 5.43 0 0 0-1.5-3.746 5.058 5.058 0 0 0-.09-3.765s-1.18-.35-3.91 1.478a13.397 13.397 0 0 0-7 0C6.52 1.177 5.34 1.527 5.34 1.527a5.058 5.058 0 0 0-.09 3.765 5.43 5.43 0 0 0-1.5 3.775c0 5.413 3.3 6.602 6.44 6.991a3.366 3.366 0 0 0-.94 2.577V22.5" />
     <path d="M9.25 19.503c-5 1.498-5-2.496-7-2.996" />
+  </svg>
+);
+
+export const SharpArrow = (): JSX.Element => (
+  <svg
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  >
+    <path d="M5 17L19 7" />
+    <path d="M19 7l-5 1" />
+    <path d="M19 7l-1 5" />
+  </svg>
+);
+
+export const CurvedArrow = (): JSX.Element => (
+  <svg
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  >
+    <path d="M5 17Q5 5 19 7" />
+    <path d="M19 7l-5 1" />
+    <path d="M19 7l-1 5" />
+  </svg>
+);
+
+export const ElbowedArrow = (): JSX.Element => (
+  <svg
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  >
+    <path d="M4 7h8Q15 7 15 10v4Q15 17 18 17h2" />
+    <path d="M20 17l-3-2.5" />
+    <path d="M20 17l-3 2.5" />
+  </svg>
+);
+
+export const ArrowheadEnd = (): JSX.Element => (
+  <svg
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  >
+    <line x1="4" y1="12" x2="16" y2="12" strokeDasharray="2 3" />
+    <path d="M16 12l4 0" />
+    <path d="M20 12l-4-3" />
+    <path d="M20 12l-4 3" />
+  </svg>
+);
+
+export const ArrowheadBoth = (): JSX.Element => (
+  <svg
+    height={demention}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+  >
+    <line x1="8" y1="12" x2="16" y2="12" />
+    <path d="M4 12l4-3" />
+    <path d="M4 12l4 3" />
+    <path d="M20 12l-4-3" />
+    <path d="M20 12l-4 3" />
   </svg>
 );

@@ -49,29 +49,38 @@ export function isWithinElement(
   switch (tool) {
     case "arrow":
     case "line": {
-      if (curvePoint) {
-        // For curved lines, sample points along the quadratic bezier curve
-        const threshold = Math.max(strokeWidth / 2 + 5, 8);
+      const arrowType = 'arrowType' in element ? element.arrowType : 'sharp';
+      const mids = 'midpoints' in element && element.midpoints ? element.midpoints : [];
+      const threshold = Math.max(strokeWidth / 2 + 5, 8);
+
+      if (arrowType === 'elbowed' && tool === 'arrow') {
+        const midX = x1 + (x2 - x1) / 2;
+        const d1 = pointToSegmentDistance(x, y, x1, y1, midX, y1);
+        const d2 = pointToSegmentDistance(x, y, midX, y1, midX, y2);
+        const d3 = pointToSegmentDistance(x, y, midX, y2, x2, y2);
+        return Math.min(d1, d2, d3) < threshold;
+      }
+
+      if (arrowType === 'curved' && tool === 'arrow' && !curvePoint && mids.length === 0) {
+        const cp = { x: (x1 + x2) / 2, y: Math.min(y1, y2) - Math.abs(x2 - x1) * 0.25 };
         const numSamples = 20;
-        
         for (let i = 0; i <= numSamples; i++) {
           const t = i / numSamples;
-          // Quadratic bezier: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
-          const px = (1-t)*(1-t)*x1 + 2*(1-t)*t*curvePoint.x + t*t*x2;
-          const py = (1-t)*(1-t)*y1 + 2*(1-t)*t*curvePoint.y + t*t*y2;
-          
-          const dist = Math.hypot(x - px, y - py);
-          if (dist < threshold) return true;
+          const px = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cp.x + t * t * x2;
+          const py = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cp.y + t * t * y2;
+          if (Math.hypot(x - px, y - py) < threshold) return true;
         }
         return false;
       }
-      
-      const a = { x: x1, y: y1 };
-      const b = { x: x2, y: y2 };
-      const c = { x, y };
 
-      const offset = distance(a, b) - (distance(a, c) + distance(b, c));
-      return Math.abs(offset) < (0.05 * strokeWidth || 1);
+      const allMids = mids.length > 0 ? mids : (curvePoint ? [curvePoint] : []);
+      const nodes = [{ x: x1, y: y1 }, ...allMids, { x: x2, y: y2 }];
+
+      for (let s = 0; s < nodes.length - 1; s++) {
+        const d = pointToSegmentDistance(x, y, nodes[s].x, nodes[s].y, nodes[s + 1].x, nodes[s + 1].y);
+        if (d < threshold) return true;
+      }
+      return false;
     }
     case "circle": {
       const width = x2 - x1 + strokeWidth;
@@ -90,7 +99,7 @@ export function isWithinElement(
 
       return (
         (mouseToCentreX * mouseToCentreX) / (radiusX * radiusX) +
-          (mouseToCentreY * mouseToCentreY) / (radiusY * radiusY) <=
+        (mouseToCentreY * mouseToCentreY) / (radiusY * radiusY) <=
         1
       );
     }
@@ -165,8 +174,6 @@ export function updateElement(
     return ele;
   });
 
-  console.log(stateCopy);
-
   setState(stateCopy, overwrite);
 }
 
@@ -211,22 +218,29 @@ export function moveElement(
   factorX: number,
   factorY: number | null = null
 ): DrawElement {
-  const curvePoint = 'curvePoint' in element && element.curvePoint
-    ? { 
-        curvePoint: { 
-          x: element.curvePoint.x + factorX, 
-          y: element.curvePoint.y + (factorY ?? factorX) 
-        } 
-      }
-    : {};
-    
+  const fy = factorY ?? factorX;
+  const extras: Partial<DrawElement> = {};
+
+  if ('curvePoint' in element && element.curvePoint) {
+    (extras as { curvePoint: Point }).curvePoint = {
+      x: element.curvePoint.x + factorX,
+      y: element.curvePoint.y + fy,
+    };
+  }
+  if ('midpoints' in element && element.midpoints && element.midpoints.length > 0) {
+    (extras as { midpoints: Point[] }).midpoints = element.midpoints.map(p => ({
+      x: p.x + factorX,
+      y: p.y + fy,
+    }));
+  }
+
   return {
     ...element,
     x1: element.x1 + factorX,
-    y1: element.y1 + (factorY ?? factorX),
+    y1: element.y1 + fy,
     x2: element.x2 + factorX,
-    y2: element.y2 + (factorY ?? factorX),
-    ...curvePoint,
+    y2: element.y2 + fy,
+    ...extras,
   };
 }
 
@@ -412,8 +426,27 @@ export function resizeValue(
       return { x2: x, y2: y };
     case "l3":
       return { curvePoint: { x, y } };
-    default:
+    default: {
+      if (corner.startsWith("lm-")) {
+        const idx = parseInt(corner.slice(3), 10);
+        const mids = ('midpoints' in elementOffset && elementOffset.midpoints)
+          ? [...elementOffset.midpoints]
+          : [];
+        if (idx >= 0 && idx < mids.length) {
+          mids[idx] = { x, y };
+          return { midpoints: mids };
+        }
+      }
+      if (corner.startsWith("la-")) {
+        const idx = parseInt(corner.slice(3), 10);
+        const mids = ('midpoints' in elementOffset && elementOffset.midpoints)
+          ? [...elementOffset.midpoints]
+          : [];
+        mids.splice(idx, 0, { x, y });
+        return { midpoints: mids };
+      }
       return {};
+    }
   }
 }
 

@@ -1,9 +1,15 @@
 import React, { ChangeEvent, useEffect, useState } from "react";
 import {
+  ArrowheadBoth,
+  ArrowheadEnd,
   Backward,
+  CurvedArrow,
   Delete,
   Duplicate,
+  ElbowedArrow,
   Forward,
+  Link,
+  SharpArrow,
   ToBack,
   ToFront,
 } from "../assets/icons";
@@ -16,7 +22,7 @@ import {
   updateElement,
 } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
-import { DrawElement, ElementStyle, SelectedElement } from "../types";
+import { ArrowType, Arrowheads, DrawElement, ElementStyle, SelectedElement } from "../types";
 
 interface ElementStyleState {
   fill: string | undefined;
@@ -26,6 +32,8 @@ interface ElementStyleState {
   opacity: number | undefined;
   borderRadius: number | undefined;
   roughness: number | undefined;
+  arrowType: ArrowType | undefined;
+  arrowheads: Arrowheads | undefined;
 }
 
 interface StyleProps {
@@ -33,7 +41,7 @@ interface StyleProps {
 }
 
 export default function Style({ selectedElement }: StyleProps): JSX.Element | null {
-  const { elements, setElements, setSelectedElement, setStyle } = useAppContext();
+  const { elements, setElements, setSelectedElement, setStyle, selectedTool } = useAppContext();
 
   const [elementStyle, setElementStyle] = useState<ElementStyleState>({
     fill: selectedElement?.fill,
@@ -43,6 +51,8 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
     opacity: selectedElement?.opacity,
     borderRadius: selectedElement?.borderRadius,
     roughness: selectedElement?.roughness,
+    arrowType: selectedElement?.arrowType,
+    arrowheads: selectedElement?.arrowheads,
   });
 
   useEffect(() => {
@@ -54,6 +64,8 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
       opacity: selectedElement?.opacity,
       borderRadius: selectedElement?.borderRadius,
       roughness: selectedElement?.roughness,
+      arrowType: selectedElement?.arrowType,
+      arrowheads: selectedElement?.arrowheads,
     });
   }, [selectedElement]);
 
@@ -112,6 +124,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               title={fill}
               className={
                 "itemButton color" +
+                (fill === "transparent" ? " checkerboard" : "") +
                 (fill === elementStyle.fill ? " selected" : "")
               }
               style={{ "--color": fill } as React.CSSProperties}
@@ -137,19 +150,19 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
       <div className="group strokeWidth">
         <p>Stroke width</p>
         <div className="innerGroup">
-          <input
-            type="range"
-            className="itemRange"
-            min={0}
-            max={20}
-            value={elementStyle.strokeWidth ?? 0}
-            step="1"
-            onChange={({ target }: ChangeEvent<HTMLInputElement>) => {
-              setStylesStates({ strokeWidth: minmax(+target.value, [0, 20]) });
+          <button
+            type="button"
+            title="Thin"
+            className={
+              "itemButton option" +
+              ((elementStyle.strokeWidth ?? 2) <= 2 ? " selected" : "")
+            }
+            onClick={() => {
+              setStylesStates({ strokeWidth: 2 });
               if (selectedId) {
                 updateElement(
                   selectedId,
-                  { strokeWidth: minmax(+target.value, [0, 20]) },
+                  { strokeWidth: 2 },
                   setElements as (
                     action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
                     overwrite?: boolean
@@ -158,7 +171,63 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                 );
               }
             }}
-          />
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            title="Medium"
+            className={
+              "itemButton option" +
+              ((elementStyle.strokeWidth ?? 2) > 2 && (elementStyle.strokeWidth ?? 2) <= 6 ? " selected" : "")
+            }
+            onClick={() => {
+              setStylesStates({ strokeWidth: 5 });
+              if (selectedId) {
+                updateElement(
+                  selectedId,
+                  { strokeWidth: 5 },
+                  setElements as (
+                    action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                    overwrite?: boolean
+                  ) => void,
+                  elements
+                );
+              }
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            title="Thick"
+            className={
+              "itemButton option" +
+              ((elementStyle.strokeWidth ?? 2) > 6 ? " selected" : "")
+            }
+            onClick={() => {
+              setStylesStates({ strokeWidth: 10 });
+              if (selectedId) {
+                updateElement(
+                  selectedId,
+                  { strokeWidth: 10 },
+                  setElements as (
+                    action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                    overwrite?: boolean
+                  ) => void,
+                  elements
+                );
+              }
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
       </div>
       <div className="group strokeStyle">
@@ -193,8 +262,8 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           ))}
         </div>
       </div>
-      <div className="group edgeStyle">
-        <p>Edge</p>
+      <div className="group sloppiness">
+        <p>Sloppiness</p>
         <div className="innerGroup">
           <button
             type="button"
@@ -219,7 +288,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             }}
           >
             <svg width="20" height="20" viewBox="0 0 20 20">
-              <line x1="2" y1="18" x2="18" y2="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="2" y1="18" x2="18" y2="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
           <button
@@ -227,7 +296,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             title="Hand-drawn (Artist)"
             className={
               "itemButton option" +
-              ((elementStyle.roughness ?? 1) > 0 ? " selected" : "")
+              ((elementStyle.roughness ?? 1) === 1 ? " selected" : "")
             }
             onClick={() => {
               setStylesStates({ roughness: 1 });
@@ -245,28 +314,22 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             }}
           >
             <svg width="20" height="20" viewBox="0 0 20 20">
-              <path d="M2 18 Q6 14 8 15 Q10 16 12 13 Q14 10 18 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+              <path d="M2 18 Q6 14 8 15 Q10 16 12 13 Q14 10 18 2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
             </svg>
           </button>
-        </div>
-      </div>
-      <div className="group opacity">
-        <p>Angles</p>
-        <div className="innerGroup">
-          <input
-            type="range"
-            min={0}
-            max={100}
-            className="itemRange"
-            value={elementStyle.borderRadius ?? 0}
-            onChange={({ target }: ChangeEvent<HTMLInputElement>) => {
-              setStylesStates({
-                borderRadius: minmax(+target.value, [0, 100]),
-              });
+          <button
+            type="button"
+            title="Cartoonist"
+            className={
+              "itemButton option" +
+              ((elementStyle.roughness ?? 1) >= 2 ? " selected" : "")
+            }
+            onClick={() => {
+              setStylesStates({ roughness: 2 });
               if (selectedId) {
                 updateElement(
                   selectedId,
-                  { borderRadius: minmax(+target.value, [0, 100]) },
+                  { roughness: 2 },
                   setElements as (
                     action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
                     overwrite?: boolean
@@ -275,19 +338,186 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                 );
               }
             }}
-          />
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <path d="M3 17 Q5 13 7 15 Q9 17 11 12 Q13 8 17 3" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              <path d="M4 18 Q7 12 9 14 Q11 16 13 11 Q15 7 18 2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" opacity="0.5" />
+            </svg>
+          </button>
         </div>
       </div>
+      {(isSelectedElement(selectedElement) ? selectedElement.tool === 'arrow' : selectedTool === 'arrow') && (
+        <>
+          <div className="group arrowType">
+            <p>Arrow type</p>
+            <div className="innerGroup">
+              {([
+                { type: 'sharp' as ArrowType, icon: SharpArrow, title: 'Sharp' },
+                { type: 'curved' as ArrowType, icon: CurvedArrow, title: 'Curved' },
+                { type: 'elbowed' as ArrowType, icon: ElbowedArrow, title: 'Elbowed' },
+              ]).map(({ type, icon: Icon, title }) => (
+                <button
+                  key={type}
+                  type="button"
+                  title={title}
+                  className={
+                    "itemButton option" +
+                    ((elementStyle.arrowType ?? 'sharp') === type ? " selected" : "")
+                  }
+                  onClick={() => {
+                    setStylesStates({ arrowType: type });
+                    if (selectedId) {
+                      updateElement(
+                        selectedId,
+                        { arrowType: type },
+                        setElements as (
+                          action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                          overwrite?: boolean
+                        ) => void,
+                        elements
+                      );
+                    }
+                  }}
+                >
+                  <Icon />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="group arrowheads">
+            <p>Arrowheads</p>
+            <div className="innerGroup">
+              {([
+                { type: 'end' as Arrowheads, icon: ArrowheadEnd, title: 'End only' },
+                { type: 'both' as Arrowheads, icon: ArrowheadBoth, title: 'Both sides' },
+              ]).map(({ type, icon: Icon, title }) => (
+                <button
+                  key={type}
+                  type="button"
+                  title={title}
+                  className={
+                    "itemButton option" +
+                    ((elementStyle.arrowheads ?? 'end') === type ? " selected" : "")
+                  }
+                  onClick={() => {
+                    setStylesStates({ arrowheads: type });
+                    if (selectedId) {
+                      updateElement(
+                        selectedId,
+                        { arrowheads: type },
+                        setElements as (
+                          action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                          overwrite?: boolean
+                        ) => void,
+                        elements
+                      );
+                    }
+                  }}
+                >
+                  <Icon />
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+      {isSelectedElement(selectedElement) && selectedElement.tool === 'rectangle' && (
+        <div className="group edges">
+          <p>Edges</p>
+          <div className="innerGroup">
+            <button
+              type="button"
+              title="Sharp edges"
+              className={
+                "itemButton option" +
+                ((elementStyle.borderRadius ?? 0) === 0 ? " selected" : "")
+              }
+              onClick={() => {
+                setStylesStates({ borderRadius: 0 });
+                if (selectedId) {
+                  updateElement(
+                    selectedId,
+                    { borderRadius: 0 },
+                    setElements as (
+                      action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                      overwrite?: boolean
+                    ) => void,
+                    elements
+                  );
+                }
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20">
+                <path d="M4 4 L4 16 L16 16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              title="Rounded edges"
+              className={
+                "itemButton option" +
+                ((elementStyle.borderRadius ?? 0) > 0 ? " selected" : "")
+              }
+              onClick={() => {
+                setStylesStates({ borderRadius: 15 });
+                if (selectedId) {
+                  updateElement(
+                    selectedId,
+                    { borderRadius: 15 },
+                    setElements as (
+                      action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                      overwrite?: boolean
+                    ) => void,
+                    elements
+                  );
+                }
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20">
+                <path d="M4 4 L4 10 Q4 16 10 16 L16 16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+          {(elementStyle.borderRadius ?? 0) > 0 && (
+            <div className="innerGroup">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                className="itemRange styleRangeSlider"
+                value={elementStyle.borderRadius ?? 15}
+                onChange={({ target }: ChangeEvent<HTMLInputElement>) => {
+                  setStylesStates({
+                    borderRadius: minmax(+target.value, [0, 100]),
+                  });
+                  if (selectedId) {
+                    updateElement(
+                      selectedId,
+                      { borderRadius: minmax(+target.value, [0, 100]) },
+                      setElements as (
+                        action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                        overwrite?: boolean
+                      ) => void,
+                      elements
+                    );
+                  }
+                }}
+              />
+            </div>
+          )}
+        </div>
+      )}
       <div className="group opacity">
         <p>Opacity</p>
-        <div className="innerGroup">
+        <div className="innerGroup opacityRow">
+          <span className="opacityTick">0</span>
           <input
             type="range"
             min={0}
             max={100}
-            className="itemRange"
+            className="itemRange styleRangeSlider"
             value={elementStyle.opacity ?? 100}
-            step="10"
+            step={1}
             onChange={({ target }: ChangeEvent<HTMLInputElement>) => {
               setStylesStates({
                 opacity: minmax(+target.value, [0, 100]),
@@ -305,6 +535,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               }
             }}
           />
+          <span className="opacityTick">100</span>
         </div>
       </div>
       {isSelectedElement(selectedElement) && (
@@ -380,6 +611,23 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             <div className="innerGroup">
               <button
                 type="button"
+                className="itemButton option"
+                title="Duplicate ~ Ctrl + d"
+                onClick={() =>
+                  duplicateElement(
+                    selectedElement,
+                    setElements as (
+                      action: (prev: DrawElement[]) => DrawElement[]
+                    ) => void,
+                    setSelectedElement,
+                    10
+                  )
+                }
+              >
+                <Duplicate />
+              </button>
+              <button
+                type="button"
                 onClick={() =>
                   deleteElement(
                     selectedElement,
@@ -397,19 +645,13 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               <button
                 type="button"
                 className="itemButton option"
-                title="Duplicate ~ Ctrl + d"
-                onClick={() =>
-                  duplicateElement(
-                    selectedElement,
-                    setElements as (
-                      action: (prev: DrawElement[]) => DrawElement[]
-                    ) => void,
-                    setSelectedElement,
-                    10
-                  )
-                }
+                title="Link/Group elements"
+                onClick={() => {
+                  // TODO: Implement link/group functionality
+                  console.log("Link/Group clicked");
+                }}
               >
-                <Duplicate />
+                <Link />
               </button>
             </div>
           </div>

@@ -269,6 +269,7 @@ export default function useCanvas(): UseCanvasReturn {
       } = selectedElement;
       const points = "points" in selectedElement ? selectedElement.points : [];
       const curvePoint = "curvePoint" in selectedElement ? selectedElement.curvePoint : undefined;
+      const midpoints = "midpoints" in selectedElement ? selectedElement.midpoints : undefined;
 
       const width = x2 - x1;
       const height = y2 - y1;
@@ -293,12 +294,17 @@ export default function useCanvas(): UseCanvasReturn {
         }));
       }
 
-      // Move curve control point along with the element
       if ((tool === "arrow" || tool === "line") && curvePoint) {
         (newStateOptions as { curvePoint: Point }).curvePoint = {
           x: curvePoint.x + deltaX,
           y: curvePoint.y + deltaY,
         };
+      }
+      if ((tool === "arrow" || tool === "line") && midpoints && midpoints.length > 0) {
+        (newStateOptions as { midpoints: Point[] }).midpoints = midpoints.map(p => ({
+          x: p.x + deltaX,
+          y: p.y + deltaY,
+        }));
       }
 
       updateElement(
@@ -321,8 +327,10 @@ export default function useCanvas(): UseCanvasReturn {
         y: prevState.y + y,
       }));
     } else if (action.startsWith("resize") && selectedElement) {
-      const resizeCorner = action.slice(7, 9);
-      const resizeType = action.slice(10) || "default";
+      const resizePayload = action.slice(7);
+      const shiftIdx = resizePayload.indexOf("-shiftkey");
+      const resizeCorner = shiftIdx >= 0 ? resizePayload.slice(0, shiftIdx) : resizePayload;
+      const resizeType = shiftIdx >= 0 ? "shiftkey" : "default";
       const s_element = getElementById(selectedElement.id, elements);
 
       if (s_element && resizeOldDementions) {

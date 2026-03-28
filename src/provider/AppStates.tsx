@@ -51,7 +51,9 @@ const defaultStyle: ElementStyle = {
   fill: BACKGROUND_COLORS[0],
   opacity: 100,
   borderRadius: 0,
-  roughness: 1, // 0 = straight, 1 = hand-drawn
+  roughness: 1,
+  arrowType: 'sharp',
+  arrowheads: 'end',
 };
 
 const isElementsInLocal = (): DrawElement[] => {

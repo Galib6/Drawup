@@ -197,76 +197,167 @@ section.styleOptions {
   position: fixed;
   top: 80px;
   left: 20px;
-  padding: 15px;
 
   overflow: auto;
   max-height: calc(100vh - 140px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
+
+  padding: 16px 18px;
+  background: #ffffff;
+  backdrop-filter: none;
+  border: none;
+  border-radius: 14px;
+  box-shadow:
+    0 4px 24px rgba(15, 23, 42, 0.08),
+    0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 section.styleOptions::-webkit-scrollbar {
-  width: 3px;
+  width: 4px;
 }
 section.styleOptions::-webkit-scrollbar-thumb {
-  background: #ced4da;
+  background: #dee2e6;
   border-radius: 100px;
 }
 
 section.styleOptions .group p {
-  font-size: 12px;
+  font-size: 11px;
   font-family: secondaryFont;
-  color: var(--primary-color);
-  margin-bottom: 5px;
+  font-weight: 500;
+  color: #868e96;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
 }
 
 section.styleOptions .group .innerGroup {
   display: flex;
   align-items: center;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+section.styleOptions .group .innerGroup + .innerGroup {
+  margin-top: 8px;
 }
 
 section.styleOptions .group .innerGroup .itemButton {
   position: relative;
-  border-radius: 5px;
-  box-sizing: content-box;
+  box-sizing: border-box;
   cursor: pointer;
-  color: var(--primary-color);
+  color: #495057;
 
   display: grid;
   place-content: center;
+  border: none;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 section.styleOptions .group .innerGroup .itemButton.color {
-  border: 1px solid #81818179;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: var(--color);
-  width: 20px;
-  height: 20px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+section.styleOptions .group .innerGroup .itemButton.color.checkerboard {
+  background: repeating-conic-gradient(#dee2e6 0% 25%, #ffffff 0% 50%) 50% / 8px 8px;
 }
 
 section.styleOptions .group .innerGroup .itemButton.color.selected::before {
   content: "";
   position: absolute;
-  inset: 0;
-  top: 0;
-  left: 0;
-  z-index: 55;
-  border: 1px solid rgb(71, 114, 180);
-  border-radius: 5px;
-  scale: 1.3;
-}
-
-section.styleOptions .group .innerGroup .itemButton.option.selected {
-  color: #0f0c69;
-  background: #c3c1ebd5;
+  inset: -3px;
+  z-index: 1;
+  border: 2px solid #4c6ef5;
+  border-radius: 9px;
+  pointer-events: none;
 }
 
 section.styleOptions .group .innerGroup .itemButton.option {
-  border: 1px solid #bbc0c779;
-  background: #e4e8ea;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #f1f3f5;
+}
+
+section.styleOptions .group .innerGroup .itemButton.option:hover {
+  background: #e9ecef;
+}
+
+section.styleOptions .group .innerGroup .itemButton.option.selected {
+  color: #5b4dcb;
+  background: #e8e4ff;
+}
+
+section.styleOptions .group .innerGroup .itemButton.option svg {
+  width: 18px;
+  height: 18px;
+}
+
+section.styleOptions .opacityRow {
+  width: 100%;
+  gap: 10px;
+}
+
+section.styleOptions .opacityTick {
+  font-size: 11px;
+  font-family: secondaryFont;
+  color: #868e96;
+  flex-shrink: 0;
+  min-width: 1.25em;
+  text-align: center;
+}
+
+section.styleOptions input.styleRangeSlider {
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  border-radius: 3px;
+  appearance: none;
+  background: #e8e4ff;
+  cursor: pointer;
+}
+
+section.styleOptions input.styleRangeSlider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #495057;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+section.styleOptions input.styleRangeSlider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #495057;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+section.styleOptions input.styleRangeSlider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #e8e4ff;
+}
+
+section.styleOptions button.itemButton.option:active {
+  border: none !important;
+}
+
+section.styleOptions button.itemButton.color:active {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 0 0 1px rgba(76, 110, 245, 0.35) !important;
 }
 
 section.undoRedo {
