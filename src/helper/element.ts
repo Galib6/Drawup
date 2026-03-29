@@ -84,10 +84,24 @@ export function elbowCornerVertices(
     if (i === 0) pushIfNew(a);
 
     if (isLast) {
-      const midX = a.x + (b.x - a.x) / 2;
-      pushIfNew({ x: midX, y: a.y });
-      pushIfNew({ x: midX, y: b.y });
-      pushIfNew(b);
+      // Determine if the movement is more horizontal or vertical
+      const dx = Math.abs(b.x - a.x);
+      const dy = Math.abs(b.y - a.y);
+      const isMoreHorizontal = dx >= dy;
+
+      if (isMoreHorizontal) {
+        // Horizontal-dominant: H-V pattern (keep original behavior)
+        const midX = a.x + (b.x - a.x) / 2;
+        pushIfNew({ x: midX, y: a.y });
+        pushIfNew({ x: midX, y: b.y });
+        pushIfNew(b);
+      } else {
+        // Vertical-dominant: V-H pattern (new behavior for up/down arrows)
+        const midY = a.y + (b.y - a.y) / 2;
+        pushIfNew({ x: a.x, y: midY });
+        pushIfNew({ x: b.x, y: midY });
+        pushIfNew(b);
+      }
     } else {
       pushIfNew({ x: b.x, y: a.y });
       pushIfNew(b);

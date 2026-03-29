@@ -807,9 +807,22 @@ export function getFocuseCorners(element: DrawElement, padding: number, position
 
         let hx: number, hy: number;
         if (isLast) {
-          const midX = a.x + (b.x - a.x) / 2;
-          hx = midX;
-          hy = (a.y + b.y) / 2;
+          // Determine if the movement is more horizontal or vertical
+          const dx = Math.abs(b.x - a.x);
+          const dy = Math.abs(b.y - a.y);
+          const isMoreHorizontal = dx >= dy;
+
+          if (isMoreHorizontal) {
+            // Horizontal-dominant: H-V pattern (original)
+            const midX = a.x + (b.x - a.x) / 2;
+            hx = midX;
+            hy = (a.y + b.y) / 2;
+          } else {
+            // Vertical-dominant: V-H pattern (new for up/down arrows)
+            const midY = a.y + (b.y - a.y) / 2;
+            hx = (a.x + b.x) / 2;
+            hy = midY;
+          }
         } else {
           hx = (a.x + b.x) / 2;
           hy = a.y;
