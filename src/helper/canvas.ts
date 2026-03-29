@@ -1,7 +1,13 @@
-import { ArrowType, Arrowheads, Corner, CornerSlug, DrawElement, FocusDemention, FocuseCorners, Point } from "../types";
+import { ArrowType, Arrowheads, Corner, CornerSlug, DrawElement, FocusDemention, FocuseCorners, FontSize, FONT_SIZE_MAP, Point, TextAlign } from "../types";
+import { elbowBendRadius, elbowCornerVertices, elbowPolylinePoints } from "./element";
 
 export const imageCache = new Map<string, HTMLImageElement>();
 let textWriting: string | null = null;
+
+export const excalifontReady: Promise<void> =
+  typeof document !== 'undefined'
+    ? document.fonts.load("30px Excalifont").then(() => {}).catch(() => {})
+    : Promise.resolve();
 
 export const writing = (id: string | null): void => {
   textWriting = id;
@@ -23,6 +29,8 @@ interface ShapeParams {
   roughness?: number;
   arrowType?: ArrowType;
   arrowheads?: Arrowheads;
+  fontSize?: FontSize;
+  textAlign?: TextAlign;
 }
 
 type ShapeFunction = (params: ShapeParams, ctx: CanvasRenderingContext2D) => void;
@@ -95,12 +103,60 @@ function drawCartoonSegment(
   }
 }
 
+function drawWobblyAlongPolyline(
+  ctx: CanvasRenderingContext2D,
+  pts: Point[],
+  random: (i: number) => number,
+  rf: number,
+  seedBase: number
+) {
+  if (pts.length < 2) return;
+  drawWobblySegment(ctx, pts[0].x, pts[0].y, pts[1].x, pts[1].y, random, rf, seedBase, true);
+  for (let i = 1; i < pts.length - 1; i++) {
+    drawWobblySegment(
+      ctx,
+      pts[i].x,
+      pts[i].y,
+      pts[i + 1].x,
+      pts[i + 1].y,
+      random,
+      rf,
+      seedBase + i * 5,
+      false
+    );
+  }
+}
+
+function drawCartoonAlongPolyline(
+  ctx: CanvasRenderingContext2D,
+  pts: Point[],
+  random: (i: number) => number,
+  maxOff: number,
+  seedBase: number
+) {
+  if (pts.length < 2) return;
+  drawCartoonSegment(ctx, pts[0].x, pts[0].y, pts[1].x, pts[1].y, random, maxOff, seedBase, true);
+  for (let i = 1; i < pts.length - 1; i++) {
+    drawCartoonSegment(
+      ctx,
+      pts[i].x,
+      pts[i].y,
+      pts[i + 1].x,
+      pts[i + 1].y,
+      random,
+      maxOff,
+      seedBase + i * 12,
+      false
+    );
+  }
+}
+
 const CARTOON_PASSES = 3;
 
 // --- Shape definitions ---
 
 export const shapes: Record<string, ShapeFunction> = {
-  arrow: ({ x1, y1, x2, y2, curvePoint, midpoints, strokeWidth = 3, roughness = 1, arrowType = 'sharp', arrowheads = 'end' }, ctx) => {
+  arrow: ({ x1, y1, x2, y2, curvePoint, midpoints, strokeWidth = 3, roughness = 1, arrowType = 'sharp', arrowheads = 'end', borderRadius = 0 }, ctx) => {
     const headlen = Math.max(10, strokeWidth * 3);
     const random = seededRandom(coordSeed(x1, y1, x2, y2));
     const { px, py } = perp(x1, y1, x2, y2);
@@ -121,43 +177,25 @@ export const shapes: Record<string, ShapeFunction> = {
     let startAngle: number;
 
     if (arrowType === 'elbowed') {
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
-
-      const midX = x1 + dx / 2;
-      const c1 = { x: midX, y: y1 };
-      const c2 = { x: midX, y: y2 };
-
-      const maxR = Math.min(absDx / 2, absDy / 2, 40);
-      const r = Math.max(maxR, 0);
-
-      const dirH1 = dx > 0 ? 1 : -1;
-      const dirV = dy > 0 ? 1 : -1;
-      const dirH2 = dx > 0 ? 1 : -1;
-
+      const mids = midpoints && midpoints.length > 0 ? midpoints : [];
       const rf = roughness * Math.min(strokeWidth * 0.4, 3);
+      const elbowPts = elbowPolylinePoints(x1, y1, x2, y2, borderRadius, 18, 4, mids);
+      const verts = elbowCornerVertices(x1, y1, x2, y2, mids);
 
-      if (r > 0 && roughness === 0) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(c1.x - dirH1 * r, c1.y);
-        ctx.quadraticCurveTo(c1.x, c1.y, c1.x, c1.y + dirV * r);
-        ctx.lineTo(c2.x, c2.y - dirV * r);
-        ctx.quadraticCurveTo(c2.x, c2.y, c2.x + dirH2 * r, c2.y);
-        ctx.lineTo(x2, y2);
-      } else if (roughness >= 2) {
+      if (roughness >= 2) {
         const maxOff = Math.min(strokeWidth * 0.7, 3);
         for (let pass = 0; pass < CARTOON_PASSES; pass++) {
           ctx.beginPath();
           const po = pass * 100;
-          drawCartoonSegment(ctx, x1, y1, c1.x, c1.y, (i) => random(po + i), maxOff, 0, true);
-          drawCartoonSegment(ctx, c1.x, c1.y, c2.x, c2.y, (i) => random(po + i), maxOff, 20, false);
-          drawCartoonSegment(ctx, c2.x, c2.y, x2, y2, (i) => random(po + i), maxOff, 40, false);
+          drawCartoonAlongPolyline(ctx, elbowPts, (i) => random(po + i), maxOff, 0);
 
-          endAngle = Math.atan2(y2 - c2.y, x2 - c2.x);
-          startAngle = Math.atan2(y1 - c1.y, x1 - c1.x);
+          const n = elbowPts.length;
+          const pTip = elbowPts[n - 1];
+          const pBefore = elbowPts[n - 2];
+          const pStart = elbowPts[0];
+          const pAfterStart = elbowPts[1];
+          endAngle = Math.atan2(pTip.y - pBefore.y, pTip.x - pBefore.x);
+          startAngle = Math.atan2(pStart.y - pAfterStart.y, pStart.x - pAfterStart.x);
           drawHead(x2, y2, endAngle, 0, po + 60);
           if (arrowheads === 'both') {
             drawHead(x1, y1, startAngle, 0, po + 70);
@@ -165,21 +203,25 @@ export const shapes: Record<string, ShapeFunction> = {
           ctx.stroke();
         }
         return;
-      } else if (roughness > 0) {
-        ctx.beginPath();
-        drawWobblySegment(ctx, x1, y1, c1.x, c1.y, random, rf, 0, true);
-        drawWobblySegment(ctx, c1.x, c1.y, c2.x, c2.y, random, rf, 10, false);
-        drawWobblySegment(ctx, c2.x, c2.y, x2, y2, random, rf, 20, false);
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(c1.x, c1.y);
-        ctx.lineTo(c2.x, c2.y);
-        ctx.lineTo(x2, y2);
       }
 
-      endAngle = Math.atan2(y2 - c2.y, x2 - c2.x);
-      startAngle = Math.atan2(y1 - c1.y, x1 - c1.x);
+      if (roughness > 0) {
+        ctx.beginPath();
+        drawWobblyAlongPolyline(ctx, elbowPts, random, rf, 0);
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(elbowPts[0].x, elbowPts[0].y);
+        for (let i = 1; i < elbowPts.length; i++) {
+          ctx.lineTo(elbowPts[i].x, elbowPts[i].y);
+        }
+      }
+
+      const lastV = verts[verts.length - 1];
+      const prevV = verts.length >= 2 ? verts[verts.length - 2] : lastV;
+      const firstV = verts[0];
+      const secondV = verts.length >= 2 ? verts[1] : firstV;
+      endAngle = Math.atan2(lastV.y - prevV.y, lastV.x - prevV.x);
+      startAngle = Math.atan2(firstV.y - secondV.y, firstV.x - secondV.x);
 
       drawHead(x2, y2, endAngle, rf, 10);
       if (arrowheads === 'both') {
@@ -663,11 +705,20 @@ export const shapes: Record<string, ShapeFunction> = {
     ctx.lineTo(last.x, last.y);
   },
 
-  text: ({ id, x1, y1, text = "" }, ctx) => {
+  text: ({ id, x1, y1, x2, text = "", fontSize = 'M', textAlign = 'left' }, ctx) => {
     if (id === textWriting) return;
-    ctx.font = "30px Arial";
+    const px = FONT_SIZE_MAP[fontSize] || 30;
+    ctx.font = `${px}px Excalifont, cursive`;
     ctx.textBaseline = "top";
-    text.split("\n").forEach((line, i) => ctx.fillText(line, x1, y1 + 30 * i));
+    ctx.textAlign = textAlign;
+    const width = x2 - x1;
+    const lines = text.split("\n");
+    lines.forEach((line, i) => {
+      let drawX = x1;
+      if (textAlign === 'center') drawX = x1 + width / 2;
+      else if (textAlign === 'right') drawX = x2;
+      ctx.fillText(line, drawX, y1 + px * i);
+    });
   },
 };
 
@@ -713,6 +764,29 @@ export function getFocuseCorners(element: DrawElement, padding: number, position
     ];
 
     if (isElbowed) {
+      const elbowMids = midpoints.length > 0 ? midpoints : [];
+      for (let i = 0; i < elbowMids.length; i++) {
+        corners.push({ slug: `lm-${i}` as CornerSlug, x: elbowMids[i].x - position, y: elbowMids[i].y - position });
+      }
+
+      const elbowNodes = [start, ...elbowMids, end];
+      for (let i = 0; i < elbowNodes.length - 1; i++) {
+        const a = elbowNodes[i];
+        const b = elbowNodes[i + 1];
+        const isLast = i === elbowNodes.length - 2;
+
+        let hx: number, hy: number;
+        if (isLast) {
+          const midX = a.x + (b.x - a.x) / 2;
+          hx = midX;
+          hy = (a.y + b.y) / 2;
+        } else {
+          hx = (a.x + b.x) / 2;
+          hy = a.y;
+        }
+        corners.push({ slug: `la-${i}` as CornerSlug, x: hx - position, y: hy - position });
+      }
+
       corners.push({ slug: "l2", x: end.x - position, y: end.y - position });
     } else if (isCurved) {
       // For curved arrows, generate default curve point if it doesn't exist
@@ -853,6 +927,8 @@ export function draw(element: DrawElement, context: CanvasRenderingContext2D): v
   if ('midpoints' in element) shapeParams.midpoints = element.midpoints;
   shapeParams.arrowType = element.arrowType;
   shapeParams.arrowheads = element.arrowheads;
+  shapeParams.fontSize = element.fontSize;
+  shapeParams.textAlign = element.textAlign;
 
   const isCartoonist = element.roughness >= 2 &&
     (tool === 'rectangle' || tool === 'diamond' || tool === 'circle' || tool === 'arrow' || tool === 'line');

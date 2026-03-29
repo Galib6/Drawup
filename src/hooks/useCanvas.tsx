@@ -3,6 +3,7 @@ import {
   cornerCursor,
   draw,
   drawFocuse,
+  excalifontReady,
   imageCache,
   inSelectedCorner,
 } from "../helper/canvas";
@@ -63,6 +64,7 @@ export default function useCanvas(): UseCanvasReturn {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const keys = useKeys();
   const dimension = useDimension();
+  const [fontLoaded, setFontLoaded] = useState(false);
   const [isInElement, setIsInElement] = useState<boolean>(false);
   const [inCorner, setInCorner] = useState<Corner | null>(null);
   const [padding, setPadding] = useState<number>(minmax(10 / scale, [0.5, 50]));
@@ -72,6 +74,10 @@ export default function useCanvas(): UseCanvasReturn {
     useState<DrawElement | null>(null);
 
   const createTextArea = useTextArea();
+
+  useEffect(() => {
+    excalifontReady.then(() => setFontLoaded(true));
+  }, []);
 
   const mousePosition = ({
     clientX,
@@ -92,18 +98,7 @@ export default function useCanvas(): UseCanvasReturn {
     const element = getElementPosition(clientX, clientY, elements);
 
     if (element?.tool === "text" && "text" in element) {
-      createTextArea(
-        element as {
-          id: string;
-          x1: number;
-          y1: number;
-          x2: number;
-          y2: number;
-          text: string;
-          strokeColor: string;
-        },
-        true
-      );
+      createTextArea(element, true);
       setSelectedElement(null);
       setRerender((state) => !state);
     }
@@ -383,17 +378,7 @@ export default function useCanvas(): UseCanvasReturn {
       );
 
       if (lastElement.tool === "text" && "text" in lastElement) {
-        createTextArea(
-          lastElement as {
-            id: string;
-            x1: number;
-            y1: number;
-            x2: number;
-            y2: number;
-            text: string;
-            strokeColor: string;
-          }
-        );
+        createTextArea(lastElement);
       }
 
       if (!lockTool && lastElement.tool !== "pencil") {
@@ -477,7 +462,7 @@ export default function useCanvas(): UseCanvasReturn {
     setPadding(pd);
 
     context.restore();
-  }, [elements, selectedElement, scale, translate, dimension, rerender]);
+  }, [elements, selectedElement, scale, translate, dimension, rerender, fontLoaded]);
 
   useEffect(() => {
     const keyDownFunction = (event: KeyboardEvent): void => {

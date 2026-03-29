@@ -8,6 +8,13 @@
   src: url(../assets/fonts/Roboto-Medium.ttf);
 }
 
+@font-face {
+  font-family: 'Excalifont';
+  src: url('/Excalifont-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -645,11 +652,8 @@ textarea.textBox {
   width: 50px;
   height: 30px;
   position: absolute;
-  font: 30px Arial;
+  font-family: 'Excalifont', cursive;
+  font-size: 30px;
   overflow: hidden;
   white-space: pre;
-  /* outline: none;
-  border: none;
-  background: none;
-  resize: none; */
 }

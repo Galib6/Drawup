@@ -17,12 +17,14 @@ import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import {
   deleteElement,
   duplicateElement,
+  getElementById,
+  measureTextBounds,
   minmax,
   moveElementLayer,
   updateElement,
 } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
-import { ArrowType, Arrowheads, DrawElement, ElementStyle, SelectedElement } from "../types";
+import { ArrowType, Arrowheads, DrawElement, ElementStyle, FontSize, SelectedElement, TextAlign } from "../types";
 
 interface ElementStyleState {
   fill: string | undefined;
@@ -34,6 +36,8 @@ interface ElementStyleState {
   roughness: number | undefined;
   arrowType: ArrowType | undefined;
   arrowheads: Arrowheads | undefined;
+  fontSize: FontSize | undefined;
+  textAlign: TextAlign | undefined;
 }
 
 interface StyleProps {
@@ -53,6 +57,8 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
     roughness: selectedElement?.roughness,
     arrowType: selectedElement?.arrowType,
     arrowheads: selectedElement?.arrowheads,
+    fontSize: selectedElement?.fontSize,
+    textAlign: selectedElement?.textAlign,
   });
 
   useEffect(() => {
@@ -66,6 +72,8 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
       roughness: selectedElement?.roughness,
       arrowType: selectedElement?.arrowType,
       arrowheads: selectedElement?.arrowheads,
+      fontSize: selectedElement?.fontSize,
+      textAlign: selectedElement?.textAlign,
     });
   }, [selectedElement]);
 
@@ -81,6 +89,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
   if (!selectedElement) return null;
 
   const selectedId = isSelectedElement(selectedElement) ? selectedElement.id : undefined;
+  const isText = isSelectedElement(selectedElement)
+    ? selectedElement.tool === 'text'
+    : selectedTool === 'text';
 
   return (
     <section className="styleOptions">
@@ -115,38 +126,41 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           ))}
         </div>
       </div>
-      <div className="group backgroundColor">
-        <p>Background</p>
-        <div className="innerGroup">
-          {BACKGROUND_COLORS.map((fill, index) => (
-            <button
-              type="button"
-              title={fill}
-              className={
-                "itemButton color" +
-                (fill === "transparent" ? " checkerboard" : "") +
-                (fill === elementStyle.fill ? " selected" : "")
-              }
-              style={{ "--color": fill } as React.CSSProperties}
-              key={index}
-              onClick={() => {
-                setStylesStates({ fill });
-                if (selectedId) {
-                  updateElement(
-                    selectedId,
-                    { fill },
-                    setElements as (
-                      action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
-                      overwrite?: boolean
-                    ) => void,
-                    elements
-                  );
+      {!isText && (
+        <div className="group backgroundColor">
+          <p>Background</p>
+          <div className="innerGroup">
+            {BACKGROUND_COLORS.map((fill, index) => (
+              <button
+                type="button"
+                title={fill}
+                className={
+                  "itemButton color" +
+                  (fill === "transparent" ? " checkerboard" : "") +
+                  (fill === elementStyle.fill ? " selected" : "")
                 }
-              }}
-            ></button>
-          ))}
+                style={{ "--color": fill } as React.CSSProperties}
+                key={index}
+                onClick={() => {
+                  setStylesStates({ fill });
+                  if (selectedId) {
+                    updateElement(
+                      selectedId,
+                      { fill },
+                      setElements as (
+                        action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                        overwrite?: boolean
+                      ) => void,
+                      elements
+                    );
+                  }
+                }}
+              ></button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+      {!isText && (
       <div className="group strokeWidth">
         <p>Stroke width</p>
         <div className="innerGroup">
@@ -230,6 +244,8 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           </button>
         </div>
       </div>
+      )}
+      {!isText && (
       <div className="group strokeStyle">
         <p>Stroke style</p>
         <div className="innerGroup">
@@ -262,6 +278,8 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           ))}
         </div>
       </div>
+      )}
+      {!isText && (
       <div className="group sloppiness">
         <p>Sloppiness</p>
         <div className="innerGroup">
@@ -346,6 +364,84 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           </button>
         </div>
       </div>
+      )}
+      {isText && (
+        <>
+          <div className="group fontSize">
+            <p>Font size</p>
+            <div className="innerGroup">
+              {(['S', 'M', 'L', 'XL'] as FontSize[]).map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  title={size}
+                  className={
+                    "itemButton option" +
+                    ((elementStyle.fontSize ?? 'M') === size ? " selected" : "")
+                  }
+                  onClick={() => {
+                    setStylesStates({ fontSize: size });
+                    if (selectedId) {
+                      const el = getElementById(selectedId, elements);
+                      const text = el && 'text' in el ? (el as { text: string }).text : '';
+                      const bounds = measureTextBounds(text, size, el?.x1 ?? 0, el?.y1 ?? 0);
+                      updateElement(
+                        selectedId,
+                        { fontSize: size, ...bounds },
+                        setElements as (
+                          action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                          overwrite?: boolean
+                        ) => void,
+                        elements
+                      );
+                    }
+                  }}
+                >
+                  <span style={{ fontSize: size === 'S' ? 11 : size === 'M' ? 13 : size === 'L' ? 15 : 17, fontWeight: 600 }}>{size}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="group textAlign">
+            <p>Text align</p>
+            <div className="innerGroup">
+              {([
+                { align: 'left' as TextAlign, title: 'Align left', paths: 'M3 5h14M3 9h9M3 13h14M3 17h9' },
+                { align: 'center' as TextAlign, title: 'Center', paths: 'M3 5h14M5.5 9h9M3 13h14M5.5 17h9' },
+                { align: 'right' as TextAlign, title: 'Align right', paths: 'M3 5h14M8 9h9M3 13h14M8 17h9' },
+              ]).map(({ align, title, paths }) => (
+                <button
+                  key={align}
+                  type="button"
+                  title={title}
+                  className={
+                    "itemButton option" +
+                    ((elementStyle.textAlign ?? 'left') === align ? " selected" : "")
+                  }
+                  onClick={() => {
+                    setStylesStates({ textAlign: align });
+                    if (selectedId) {
+                      updateElement(
+                        selectedId,
+                        { textAlign: align },
+                        setElements as (
+                          action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                          overwrite?: boolean
+                        ) => void,
+                        elements
+                      );
+                    }
+                  }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20">
+                    <path d={paths} stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
       {(isSelectedElement(selectedElement) ? selectedElement.tool === 'arrow' : selectedTool === 'arrow') && (
         <>
           <div className="group arrowType">
@@ -421,13 +517,19 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           </div>
         </>
       )}
-      {isSelectedElement(selectedElement) && selectedElement.tool === 'rectangle' && (
+      {isSelectedElement(selectedElement) &&
+        (selectedElement.tool === 'rectangle' ||
+          (selectedElement.tool === 'arrow' && selectedElement.arrowType === 'elbowed')) && (
         <div className="group edges">
-          <p>Edges</p>
+          <p>{selectedElement.tool === 'arrow' ? 'Bend radius' : 'Edges'}</p>
           <div className="innerGroup">
             <button
               type="button"
-              title="Sharp edges"
+              title={
+                selectedElement.tool === 'arrow'
+                  ? 'Auto bend (follows arrow size, max 40px)'
+                  : 'Sharp edges'
+              }
               className={
                 "itemButton option" +
                 ((elementStyle.borderRadius ?? 0) === 0 ? " selected" : "")
@@ -453,7 +555,11 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             </button>
             <button
               type="button"
-              title="Rounded edges"
+              title={
+                selectedElement.tool === 'arrow'
+                  ? 'Set explicit bend radius (slider)'
+                  : 'Rounded edges'
+              }
               className={
                 "itemButton option" +
                 ((elementStyle.borderRadius ?? 0) > 0 ? " selected" : "")
@@ -507,37 +613,39 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           )}
         </div>
       )}
-      <div className="group opacity">
-        <p>Opacity</p>
-        <div className="innerGroup opacityRow">
-          <span className="opacityTick">0</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            className="itemRange styleRangeSlider"
-            value={elementStyle.opacity ?? 100}
-            step={1}
-            onChange={({ target }: ChangeEvent<HTMLInputElement>) => {
-              setStylesStates({
-                opacity: minmax(+target.value, [0, 100]),
-              });
-              if (selectedId) {
-                updateElement(
-                  selectedId,
-                  { opacity: minmax(+target.value, [0, 100]) },
-                  setElements as (
-                    action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
-                    overwrite?: boolean
-                  ) => void,
-                  elements
-                );
-              }
-            }}
-          />
-          <span className="opacityTick">100</span>
+      {!isText && (
+        <div className="group opacity">
+          <p>Opacity</p>
+          <div className="innerGroup opacityRow">
+            <span className="opacityTick">0</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              className="itemRange styleRangeSlider"
+              value={elementStyle.opacity ?? 100}
+              step={1}
+              onChange={({ target }: ChangeEvent<HTMLInputElement>) => {
+                setStylesStates({
+                  opacity: minmax(+target.value, [0, 100]),
+                });
+                if (selectedId) {
+                  updateElement(
+                    selectedId,
+                    { opacity: minmax(+target.value, [0, 100]) },
+                    setElements as (
+                      action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+                      overwrite?: boolean
+                    ) => void,
+                    elements
+                  );
+                }
+              }}
+            />
+            <span className="opacityTick">100</span>
+          </div>
         </div>
-      </div>
+      )}
       {isSelectedElement(selectedElement) && (
         <React.Fragment>
           <div className="group layers">

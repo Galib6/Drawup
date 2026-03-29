@@ -3,6 +3,8 @@ import {
   BoundingBox,
   CreateElementParams,
   DrawElement,
+  FontSize,
+  FONT_SIZE_MAP,
   Point,
   SelectedElement,
 } from "../types";
@@ -36,6 +38,140 @@ function pointToSegmentDistance(
   return Math.hypot(px - cx, py - cy);
 }
 
+/** Max corner radius for elbow arrows when borderRadius is 0 (legacy auto-round). */
+const ELBOW_AUTO_BEND_CAP = 40;
+
+export function elbowBendRadius(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  borderRadius: number = 0
+): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const rGeo = Math.min(Math.abs(dx) / 2, Math.abs(dy) / 2);
+  if (borderRadius > 0) return Math.min(borderRadius, rGeo);
+  return Math.min(ELBOW_AUTO_BEND_CAP, rGeo);
+}
+
+/**
+ * Build the full list of axis-aligned corner vertices for an elbow path.
+ * - 0 midpoints: classic 3-segment Z-path (H-V-H) through horizontal midpoint.
+ * - 1+ midpoints: staircase — H-V L-shapes for intermediate pairs, Z-path for
+ *   the last pair so the arrowhead ends on a horizontal segment.
+ */
+export function elbowCornerVertices(
+  x1: number, y1: number,
+  x2: number, y2: number,
+  midpoints: Point[] = []
+): Point[] {
+  const waypoints = [{ x: x1, y: y1 }, ...midpoints, { x: x2, y: y2 }];
+  const vertices: Point[] = [];
+
+  const pushIfNew = (p: Point) => {
+    const last = vertices[vertices.length - 1];
+    if (!last || Math.hypot(p.x - last.x, p.y - last.y) > 0.01) {
+      vertices.push(p);
+    }
+  };
+
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i];
+    const b = waypoints[i + 1];
+    const isLast = i === waypoints.length - 2;
+
+    if (i === 0) pushIfNew(a);
+
+    if (isLast) {
+      const midX = a.x + (b.x - a.x) / 2;
+      pushIfNew({ x: midX, y: a.y });
+      pushIfNew({ x: midX, y: b.y });
+      pushIfNew(b);
+    } else {
+      pushIfNew({ x: b.x, y: a.y });
+      pushIfNew(b);
+    }
+  }
+  return vertices;
+}
+
+/** Dense polyline along the elbow path (straight segments + quadratic corners) for drawing and hit-testing. */
+export function elbowPolylinePoints(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  borderRadius: number = 0,
+  lineStep = 18,
+  minQuadSamples = 4,
+  midpoints: Point[] = []
+): Point[] {
+  const vertices = elbowCornerVertices(x1, y1, x2, y2, midpoints);
+  if (vertices.length < 2) return vertices;
+
+  const out: Point[] = [];
+  const add = (px: number, py: number) => {
+    const last = out[out.length - 1];
+    if (!last || Math.hypot(px - last.x, py - last.y) > 0.01) out.push({ x: px, y: py });
+  };
+
+  const pushLine = (ax: number, ay: number, bx: number, by: number, includeFirst: boolean) => {
+    const dist = Math.hypot(bx - ax, by - ay);
+    const n = Math.max(1, Math.ceil(dist / lineStep));
+    const iStart = includeFirst ? 0 : 1;
+    for (let i = iStart; i <= n; i++) {
+      const t = i / n;
+      add(ax + (bx - ax) * t, ay + (by - ay) * t);
+    }
+  };
+
+  const pushQuad = (p0: Point, pc: Point, p1: Point, nSeg: number) => {
+    for (let i = 1; i <= nSeg; i++) {
+      const t = i / nSeg;
+      const omt = 1 - t;
+      add(
+        omt * omt * p0.x + 2 * omt * t * pc.x + t * t * p1.x,
+        omt * omt * p0.y + 2 * omt * t * pc.y + t * t * p1.y
+      );
+    }
+  };
+
+  const verts = vertices.map(v => ({ ...v }));
+
+  for (let seg = 0; seg < verts.length - 1; seg++) {
+    const a = verts[seg];
+    const b = verts[seg + 1];
+
+    if (seg < verts.length - 2) {
+      const c = verts[seg + 2];
+      const lenAB = Math.hypot(b.x - a.x, b.y - a.y);
+      const lenBC = Math.hypot(c.x - b.x, c.y - b.y);
+      const maxR = Math.min(lenAB / 2, lenBC / 2);
+      const r = borderRadius > 0 ? Math.min(borderRadius, maxR) : Math.min(ELBOW_AUTO_BEND_CAP, maxR);
+
+      if (r > 0.5) {
+        const dirAB_x = b.x > a.x ? 1 : b.x < a.x ? -1 : 0;
+        const dirAB_y = b.y > a.y ? 1 : b.y < a.y ? -1 : 0;
+        const dirBC_x = c.x > b.x ? 1 : c.x < b.x ? -1 : 0;
+        const dirBC_y = c.y > b.y ? 1 : c.y < b.y ? -1 : 0;
+
+        const preCorner = { x: b.x - dirAB_x * r, y: b.y - dirAB_y * r };
+        const postCorner = { x: b.x + dirBC_x * r, y: b.y + dirBC_y * r };
+        const quadSamples = Math.max(minQuadSamples, Math.ceil(r / 5));
+        pushLine(a.x, a.y, preCorner.x, preCorner.y, seg === 0);
+        pushQuad(preCorner, b, postCorner, quadSamples);
+        verts[seg + 1] = postCorner;
+        continue;
+      }
+    }
+
+    pushLine(a.x, a.y, b.x, b.y, seg === 0);
+  }
+
+  return out;
+}
+
 export function isWithinElement(
   x: number,
   y: number,
@@ -53,11 +189,20 @@ export function isWithinElement(
       const threshold = Math.max(strokeWidth / 2 + 5, 8);
 
       if (arrowType === 'elbowed' && tool === 'arrow') {
-        const midX = x1 + (x2 - x1) / 2;
-        const d1 = pointToSegmentDistance(x, y, x1, y1, midX, y1);
-        const d2 = pointToSegmentDistance(x, y, midX, y1, midX, y2);
-        const d3 = pointToSegmentDistance(x, y, midX, y2, x2, y2);
-        return Math.min(d1, d2, d3) < threshold;
+        const br = element.borderRadius ?? 0;
+        const pts = elbowPolylinePoints(x1, y1, x2, y2, br, 18, 4, mids);
+        for (let i = 0; i < pts.length - 1; i++) {
+          const d = pointToSegmentDistance(
+            x,
+            y,
+            pts[i].x,
+            pts[i].y,
+            pts[i + 1].x,
+            pts[i + 1].y
+          );
+          if (d < threshold) return true;
+        }
+        return false;
       }
 
       if (arrowType === 'curved' && tool === 'arrow') {
@@ -136,6 +281,22 @@ export function getElementPosition(
   elements: DrawElement[]
 ): DrawElement | undefined {
   return elements.filter((element) => isWithinElement(x, y, element)).at(-1);
+}
+
+export function measureTextBounds(
+  text: string,
+  fontSize: FontSize,
+  x1: number,
+  y1: number
+): { x2: number; y2: number } {
+  const px = FONT_SIZE_MAP[fontSize] || 30;
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return { x2: x1, y2: y1 + px };
+  ctx.font = `${px}px Excalifont, cursive`;
+  const lines = text.split("\n");
+  const widest = Math.max(...lines.map((l) => ctx.measureText(l).width), 1);
+  return { x2: x1 + widest, y2: y1 + px * lines.length };
 }
 
 export function createElement(params: CreateElementParams): DrawElement {

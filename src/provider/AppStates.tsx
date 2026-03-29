@@ -54,6 +54,8 @@ const defaultStyle: ElementStyle = {
   roughness: 1,
   arrowType: 'sharp',
   arrowheads: 'end',
+  fontSize: 'M',
+  textAlign: 'left',
 };
 
 const isElementsInLocal = (): DrawElement[] => {

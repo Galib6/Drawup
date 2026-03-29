@@ -31,6 +31,17 @@ export interface Point {
 export type ArrowType = 'sharp' | 'curved' | 'elbowed';
 export type Arrowheads = 'end' | 'both';
 
+// Text types
+export type FontSize = 'S' | 'M' | 'L' | 'XL';
+export type TextAlign = 'left' | 'center' | 'right';
+
+export const FONT_SIZE_MAP: Record<FontSize, number> = {
+  S: 20,
+  M: 30,
+  L: 44,
+  XL: 60,
+};
+
 // Style types
 export interface ElementStyle {
   strokeWidth: number;
@@ -42,6 +53,8 @@ export interface ElementStyle {
   roughness: number; // 0 = straight/clean, 1+ = hand-drawn/sketchy
   arrowType: ArrowType;
   arrowheads: Arrowheads;
+  fontSize: FontSize;
+  textAlign: TextAlign;
 }
 
 // Element types

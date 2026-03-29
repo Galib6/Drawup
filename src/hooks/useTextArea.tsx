@@ -1,7 +1,7 @@
 import { writing } from "../helper/canvas";
 import { updateElement } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
-import { DrawElement } from "../types";
+import { DrawElement, FontSize, FONT_SIZE_MAP, TextAlign } from "../types";
 
 interface TextAreaElement {
   id: string;
@@ -11,6 +11,8 @@ interface TextAreaElement {
   y2: number;
   text: string;
   strokeColor: string;
+  fontSize?: FontSize;
+  textAlign?: TextAlign;
 }
 
 export default function useTextArea(): (
@@ -31,6 +33,9 @@ export default function useTextArea(): (
 
   function createTextArea(element: TextAreaElement, update = false): void {
     const { id, x1, y1, text, strokeColor } = element;
+    const fontSizeKey = element.fontSize || 'M';
+    const align = element.textAlign || 'left';
+    const fontPx = FONT_SIZE_MAP[fontSizeKey] || 30;
     writing(id);
 
     const xy = { x2: element.x2, y2: element.y2 };
@@ -39,7 +44,8 @@ export default function useTextArea(): (
     textarea.className = "textBox";
     textarea.style.top = canvasToWindow(x1, y1).y + "px";
     textarea.style.left = canvasToWindow(x1, y1).x + "px";
-    textarea.style.fontSize = 30 * scale + "px";
+    textarea.style.fontSize = fontPx * scale + "px";
+    textarea.style.textAlign = align;
     textarea.style.color = strokeColor;
     textarea.textContent = text;
     document.body.appendChild(textarea);
@@ -55,7 +61,7 @@ export default function useTextArea(): (
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       if (!ctx) return 0;
-      ctx.font = "30px Arial";
+      ctx.font = `${fontPx}px Excalifont, cursive`;
       return ctx.measureText(text).width;
     }
 
