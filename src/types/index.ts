@@ -19,6 +19,7 @@ export type ActionType =
   | 'draw'
   | 'move'
   | 'translate'
+  | 'select-rect'
   | `resize-${string}`;
 
 // Point type
@@ -67,6 +68,8 @@ export interface BaseElement extends ElementStyle {
   y2: number;
   curvePoint?: Point; // Legacy single control point (kept for backward compat)
   midpoints?: Point[]; // Waypoints between (x1,y1) and (x2,y2)
+  /** Label drawn inside closed shapes (rectangle, circle, …); edited via double-click. */
+  text?: string;
 }
 
 export interface PencilElement extends BaseElement {
@@ -208,6 +211,8 @@ export interface AppContextType {
   setStyle: React.Dispatch<React.SetStateAction<ElementStyle>>;
   selectedElement: SelectedElement | null;
   setSelectedElement: React.Dispatch<React.SetStateAction<SelectedElement | null>>;
+  selectedIds: string[];
+  setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
   undo: () => void;
   redo: () => void;
   session: string | null;

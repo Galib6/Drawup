@@ -14,17 +14,20 @@ import useDimension from "./useDimension";
 
 import {
   adjustCoordinates,
-  arrowMove,
   createElement,
-  deleteElement,
+  deleteElementsByIds,
   duplicateElement,
+  duplicateSelectedElements,
   getElementById,
+  getElementIdsInRect,
   getElementPosition,
   minmax,
+  moveElement,
   resizeValue,
   saveElements,
   updateElement,
   uploadElements,
+  moveElementsByIds,
 } from "../helper/element";
 import {
   BoundingBox,
@@ -37,6 +40,15 @@ import {
 } from "../types";
 import useKeys from "./useKeys";
 import useTextArea from "./useTextArea";
+
+const SHAPE_LABEL_TOOLS = new Set<DrawElement["tool"]>([
+  "rectangle",
+  "diamond",
+  "circle",
+  "arrow",
+  "line",
+  "image",
+]);
 
 export default function useCanvas(): UseCanvasReturn {
   const {
@@ -56,6 +68,8 @@ export default function useCanvas(): UseCanvasReturn {
     style,
     selectedElement,
     setSelectedElement,
+    selectedIds,
+    setSelectedIds,
     undo,
     redo,
     rerender,
@@ -74,6 +88,13 @@ export default function useCanvas(): UseCanvasReturn {
   const [mouseAction, setMouseAction] = useState<MouseAction>({ x: 0, y: 0 });
   const [resizeOldDementions, setResizeOldDementions] =
     useState<DrawElement | null>(null);
+  const groupMoveStartRef = useRef<Map<string, DrawElement>>(new Map());
+  const [marqueeRect, setMarqueeRect] = useState<{
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  } | null>(null);
 
   const createTextArea = useTextArea();
 
@@ -99,9 +120,34 @@ export default function useCanvas(): UseCanvasReturn {
     const { clientX, clientY } = mousePosition(event);
     const element = getElementPosition(clientX, clientY, elements);
 
-    if (element?.tool === "text" && "text" in element) {
+    if (!element) return;
+
+    if (element.tool === "text" && "text" in element) {
       createTextArea(element, true);
       setSelectedElement(null);
+      setSelectedIds([]);
+      setRerender((state) => !state);
+      return;
+    }
+
+    if (SHAPE_LABEL_TOOLS.has(element.tool)) {
+      createTextArea(
+        {
+          id: element.id,
+          x1: element.x1,
+          y1: element.y1,
+          x2: element.x2,
+          y2: element.y2,
+          text: element.text ?? "",
+          strokeColor: element.strokeColor,
+          fontSize: element.fontSize,
+          textAlign: element.textAlign,
+        },
+        (element.text?.length ?? 0) > 0,
+        true
+      );
+      setSelectedElement(null);
+      setSelectedIds([]);
       setRerender((state) => !state);
     }
   };
@@ -112,7 +158,7 @@ export default function useCanvas(): UseCanvasReturn {
     const { clientX, clientY } = mousePosition(event);
     lockUI(true);
 
-    if (inCorner) {
+    if (inCorner && selectedIds.length <= 1) {
       setResizeOldDementions(
         getElementById(selectedElement?.id, elements) || null
       );
@@ -137,12 +183,12 @@ export default function useCanvas(): UseCanvasReturn {
 
     if (selectedTool === "selection") {
       const element = getElementPosition(clientX, clientY, elements);
+      const additive = event.metaKey || event.ctrlKey;
 
       if (element) {
-        const offsetX = clientX - element.x1;
-        const offsetY = clientY - element.y1;
-
         if (event.altKey) {
+          const offsetX = clientX - element.x1;
+          const offsetY = clientY - element.y1;
           duplicateElement(
             element as SelectedElement,
             setElements as (
@@ -153,24 +199,54 @@ export default function useCanvas(): UseCanvasReturn {
             {
               offsetX,
               offsetY,
-            }
+            },
+            setSelectedIds
           );
-        } else {
-          setElements((prevState) => prevState);
-          setMouseAction({ x: event.clientX, y: event.clientY });
-          setSelectedElement({
-            ...element,
-            offsetX,
-            offsetY,
-            lastPosX: clientX,
-            lastPosY: clientY,
-          });
+          return;
         }
+
+        if (additive) {
+          setSelectedIds((prev) => {
+            const has = prev.includes(element.id);
+            return has ? prev.filter((id) => id !== element.id) : [...prev, element.id];
+          });
+          setMouseAction({ x: event.clientX, y: event.clientY });
+          lockUI(false);
+          return;
+        }
+
+        const wasInGroup = selectedIds.includes(element.id);
+        if (!wasInGroup) {
+          setSelectedIds([element.id]);
+        }
+        const moveIds =
+          wasInGroup && selectedIds.length > 0 ? selectedIds : [element.id];
+
+        const snap = new Map<string, DrawElement>();
+        for (const id of moveIds) {
+          const el = getElementById(id, elements);
+          if (el) snap.set(id, el);
+        }
+        groupMoveStartRef.current = snap;
+
+        const offsetX = clientX - element.x1;
+        const offsetY = clientY - element.y1;
+        setElements((prevState) => prevState);
+        setMouseAction({ x: event.clientX, y: event.clientY });
+        setSelectedElement({
+          ...element,
+          offsetX,
+          offsetY,
+          lastPosX: clientX,
+          lastPosY: clientY,
+        });
         setAction("move");
-      } else {
-        setSelectedElement(null);
+        return;
       }
 
+      setMarqueeRect({ x1: clientX, y1: clientY, x2: clientX, y2: clientY });
+      setMouseAction({ x: event.clientX, y: event.clientY });
+      setAction("select-rect");
       return;
     }
     setAction("draw");
@@ -203,7 +279,14 @@ export default function useCanvas(): UseCanvasReturn {
   ): void => {
     const { clientX, clientY } = mousePosition(event);
 
-    if (selectedElement) {
+    if (action === "select-rect") {
+      setMarqueeRect((prev) =>
+        prev ? { ...prev, x2: clientX, y2: clientY } : null
+      );
+      return;
+    }
+
+    if (selectedElement && selectedIds.length <= 1) {
       setInCorner(
         inSelectedCorner(
           getElementById(selectedElement.id, elements),
@@ -213,6 +296,8 @@ export default function useCanvas(): UseCanvasReturn {
           scale
         )
       );
+    } else {
+      setInCorner(null);
     }
 
     if (getElementPosition(clientX, clientY, elements)) {
@@ -252,66 +337,20 @@ export default function useCanvas(): UseCanvasReturn {
         true
       );
     } else if (action === "move" && selectedElement) {
-      const {
-        id,
-        x1,
-        y1,
-        x2,
-        y2,
-        offsetX = 0,
-        offsetY = 0,
-        tool,
-        lastPosX = 0,
-        lastPosY = 0,
-      } = selectedElement;
-      const points = "points" in selectedElement ? selectedElement.points : [];
-      const curvePoint = "curvePoint" in selectedElement ? selectedElement.curvePoint : undefined;
-      const midpoints = "midpoints" in selectedElement ? selectedElement.midpoints : undefined;
-
-      const width = x2 - x1;
-      const height = y2 - y1;
-
-      const nx = clientX - offsetX;
-      const ny = clientY - offsetY;
-
+      const idsToMove =
+        selectedIds.length > 0 ? selectedIds : [selectedElement.id];
+      const { lastPosX = 0, lastPosY = 0 } = selectedElement;
       const deltaX = clientX - lastPosX;
       const deltaY = clientY - lastPosY;
 
-      let newStateOptions: Partial<DrawElement> = {
-        x1: nx,
-        y1: ny,
-        x2: nx + width,
-        y2: ny + height,
-      };
-
-      if (tool === "pencil" && points) {
-        (newStateOptions as { points: Point[] }).points = points.map((p) => ({
-          x: p.x + deltaX,
-          y: p.y + deltaY,
-        }));
-      }
-
-      if ((tool === "arrow" || tool === "line") && curvePoint) {
-        (newStateOptions as { curvePoint: Point }).curvePoint = {
-          x: curvePoint.x + deltaX,
-          y: curvePoint.y + deltaY,
-        };
-      }
-      if ((tool === "arrow" || tool === "line") && midpoints && midpoints.length > 0) {
-        (newStateOptions as { midpoints: Point[] }).midpoints = midpoints.map(p => ({
-          x: p.x + deltaX,
-          y: p.y + deltaY,
-        }));
-      }
-
-      updateElement(
-        id,
-        newStateOptions,
-        setElements as (
-          action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
-          overwrite?: boolean
-        ) => void,
-        elements,
+      setElements(
+        (prev) =>
+          prev.map((el) => {
+            if (!idsToMove.includes(el.id)) return el;
+            const snap = groupMoveStartRef.current.get(el.id);
+            if (!snap) return el;
+            return moveElement(snap, deltaX, deltaY);
+          }),
         true
       );
     } else if (action === "translate") {
@@ -355,15 +394,43 @@ export default function useCanvas(): UseCanvasReturn {
   };
 
   const handleMouseUp = (event: React.MouseEvent<HTMLCanvasElement>): void => {
+    const prevAction = action;
     setAction("none");
     lockUI(false);
 
-    if (event.clientX === mouseAction.x && event.clientY === mouseAction.y) {
+    if (
+      prevAction === "draw" &&
+      event.clientX === mouseAction.x &&
+      event.clientY === mouseAction.y
+    ) {
       setElements("prevState");
       return;
     }
 
-    if (action === "draw") {
+    if (prevAction === "select-rect") {
+      if (marqueeRect) {
+        const { x1, y1, x2, y2 } = marqueeRect;
+        const w = Math.abs(x2 - x1);
+        const h = Math.abs(y2 - y1);
+        if (w < 4 && h < 4) {
+          setSelectedIds([]);
+          setSelectedElement(null);
+        } else {
+          const ids = getElementIdsInRect(elements, x1, y1, x2, y2);
+          setSelectedIds(ids);
+          if (ids.length === 1) {
+            const el = getElementById(ids[0], elements);
+            setSelectedElement(el ? ({ ...el } as SelectedElement) : null);
+          } else {
+            setSelectedElement(null);
+          }
+        }
+      }
+      setMarqueeRect(null);
+      return;
+    }
+
+    if (prevAction === "draw") {
       const lastElement = elements.at(-1);
       if (!lastElement) return;
 
@@ -385,12 +452,15 @@ export default function useCanvas(): UseCanvasReturn {
 
       if (!lockTool && lastElement.tool !== "pencil") {
         setSelectedTool("selection");
-        if (lastElement.tool !== "text") setSelectedElement(lastElement);
+        if (lastElement.tool !== "text") {
+          setSelectedElement(lastElement);
+          setSelectedIds([lastElement.id]);
+        }
       }
       return;
     }
 
-    if (action.startsWith("resize") && selectedElement) {
+    if (prevAction.startsWith("resize") && selectedElement) {
       const adjustedElement = getElementById(selectedElement.id, elements);
       if (adjustedElement) {
         const { id, x1, y1, x2, y2 } = adjustCoordinates(adjustedElement);
@@ -465,88 +535,135 @@ export default function useCanvas(): UseCanvasReturn {
 
     const pd = minmax(10 / scale, [0.5, 50]);
 
+    const focusIds = new Set(selectedIds);
+    if (selectedElement) focusIds.add(selectedElement.id);
+
     elements.forEach((element) => {
-      if (element.id === selectedElement?.id) {
+      if (focusIds.has(element.id)) {
         drawFocuse(element, context, pd, scale);
       }
       draw(element, context);
     });
 
+    if (marqueeRect) {
+      const mx1 = Math.min(marqueeRect.x1, marqueeRect.x2);
+      const my1 = Math.min(marqueeRect.y1, marqueeRect.y2);
+      const mw = Math.abs(marqueeRect.x2 - marqueeRect.x1);
+      const mh = Math.abs(marqueeRect.y2 - marqueeRect.y1);
+      context.setLineDash([]);
+      context.fillStyle = "rgba(165, 180, 252, 0.28)";
+      context.fillRect(mx1, my1, mw, mh);
+      context.strokeStyle = "rgba(129, 140, 248, 0.95)";
+      context.lineWidth = 1 / scale;
+      context.strokeRect(mx1, my1, mw, mh);
+    }
+
     setPadding(pd);
 
     context.restore();
-  }, [elements, selectedElement, scale, translate, dimension, rerender, fontLoaded]);
+  }, [
+    elements,
+    selectedElement,
+    selectedIds,
+    marqueeRect,
+    scale,
+    translate,
+    dimension,
+    rerender,
+    fontLoaded,
+  ]);
 
   useEffect(() => {
     const keyDownFunction = (event: KeyboardEvent): void => {
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const prevent = (): void => event.preventDefault();
-      if (selectedElement) {
+      const targets =
+        selectedIds.length > 0
+          ? selectedIds
+          : selectedElement
+            ? [selectedElement.id]
+            : [];
+
+      if (targets.length > 0) {
         if (key === "Backspace" || key === "Delete") {
           prevent();
-          deleteElement(
-            selectedElement,
+          deleteElementsByIds(
+            targets,
             setElements as (
               action: (prev: DrawElement[]) => DrawElement[]
             ) => void,
-            setSelectedElement
+            setSelectedElement,
+            setSelectedIds
           );
         }
 
         if (ctrlKey && key.toLowerCase() === "d") {
           prevent();
-          duplicateElement(
-            selectedElement,
+          duplicateSelectedElements(
+            targets,
             setElements as (
               action: (prev: DrawElement[]) => DrawElement[]
             ) => void,
             setSelectedElement,
+            setSelectedIds,
             10
           );
         }
 
         if (key === "ArrowLeft") {
           prevent();
-          arrowMove(
-            selectedElement,
+          moveElementsByIds(
+            targets,
             -1,
             0,
             setElements as (
-              action: (prev: DrawElement[]) => DrawElement[]
-            ) => void
+              action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+              overwrite?: boolean
+            ) => void,
+            elements,
+            true
           );
         }
         if (key === "ArrowUp") {
           prevent();
-          arrowMove(
-            selectedElement,
+          moveElementsByIds(
+            targets,
             0,
             -1,
             setElements as (
-              action: (prev: DrawElement[]) => DrawElement[]
-            ) => void
+              action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+              overwrite?: boolean
+            ) => void,
+            elements,
+            true
           );
         }
         if (key === "ArrowRight") {
           prevent();
-          arrowMove(
-            selectedElement,
+          moveElementsByIds(
+            targets,
             1,
             0,
             setElements as (
-              action: (prev: DrawElement[]) => DrawElement[]
-            ) => void
+              action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+              overwrite?: boolean
+            ) => void,
+            elements,
+            true
           );
         }
         if (key === "ArrowDown") {
           prevent();
-          arrowMove(
-            selectedElement,
+          moveElementsByIds(
+            targets,
             0,
             1,
             setElements as (
-              action: (prev: DrawElement[]) => DrawElement[]
-            ) => void
+              action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+              overwrite?: boolean
+            ) => void,
+            elements,
+            true
           );
         }
       }
@@ -577,11 +694,21 @@ export default function useCanvas(): UseCanvasReturn {
     return () => {
       window.removeEventListener("keydown", keyDownFunction);
     };
-  }, [undo, redo, selectedElement, elements, setElements, setSelectedElement]);
+  }, [
+    undo,
+    redo,
+    selectedElement,
+    selectedIds,
+    elements,
+    setElements,
+    setSelectedElement,
+    setSelectedIds,
+  ]);
 
   useEffect(() => {
     if (selectedTool !== "selection") {
       setSelectedElement(null);
+      setSelectedIds([]);
     }
 
     if (selectedTool === "image") {

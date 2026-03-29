@@ -81,6 +81,7 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(
     defaultSelectedElement
   );
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [action, setAction] = useState<ActionType>(defaultAction);
   const [selectedTool, setSelectedTool] = useState<ToolSlug>(defaultSelectedTool);
   const [translate, setTranslate] = useState<TranslateState>(defaultTranslate);
@@ -99,6 +100,11 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
       alert("We couldn't save your last action. Try again.");
       return;
     }
+
+    setSelectedIds((prev) => {
+      const next = prev.filter((id) => getElementById(id, elements));
+      return next.length === prev.length ? prev : next;
+    });
 
     if (!getElementById(selectedElement?.id, elements)) {
       setSelectedElement(null);
@@ -141,7 +147,7 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
       {
         slug: "selection",
         icon: Selection as FC,
-        title: "Selection",
+        title: "Selection (Ctrl/Cmd+click multi-select, drag on empty for box select)",
         toolAction,
       },
       {
@@ -213,6 +219,8 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
     setScaleOffset(defaultScaleOffset);
     setStyle(defaultStyle);
     setSession(defaultSession);
+    setSelectedElement(null);
+    setSelectedIds([]);
   }
 
   return (
@@ -238,6 +246,8 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
         setStyle,
         selectedElement,
         setSelectedElement,
+        selectedIds,
+        setSelectedIds,
         undo,
         redo,
         session,

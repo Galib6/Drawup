@@ -337,16 +337,95 @@ export function updateElement(
   setState(stateCopy, overwrite);
 }
 
+export function updateElementsByIds(
+  ids: string[],
+  stateOption: Partial<DrawElement>,
+  setState: (
+    action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+    overwrite?: boolean
+  ) => void,
+  state: DrawElement[],
+  overwrite = false
+): void {
+  if (ids.length === 0) return;
+  const idSet = new Set(ids);
+  const stateCopy = state.map((ele) =>
+    idSet.has(ele.id) ? ({ ...ele, ...stateOption } as DrawElement) : ele
+  );
+  setState(stateCopy, overwrite);
+}
+
+/** Axis-aligned marquee in canvas coordinates; returns ids in stack order (bottom to top). */
+export function getElementIdsInRect(
+  elements: DrawElement[],
+  rx1: number,
+  ry1: number,
+  rx2: number,
+  ry2: number
+): string[] {
+  const minX = Math.min(rx1, rx2);
+  const maxX = Math.max(rx1, rx2);
+  const minY = Math.min(ry1, ry2);
+  const maxY = Math.max(ry1, ry2);
+  const out: string[] = [];
+  for (const el of elements) {
+    const ex1 = Math.min(el.x1, el.x2);
+    const ex2 = Math.max(el.x1, el.x2);
+    const ey1 = Math.min(el.y1, el.y2);
+    const ey2 = Math.max(el.y1, el.y2);
+    if (ex2 >= minX && ex1 <= maxX && ey2 >= minY && ey1 <= maxY) {
+      out.push(el.id);
+    }
+  }
+  return out;
+}
+
+export function moveElementsByIds(
+  ids: string[],
+  dx: number,
+  dy: number,
+  setState: (
+    action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+    overwrite?: boolean
+  ) => void,
+  state: DrawElement[],
+  overwrite = true
+): void {
+  if (ids.length === 0) return;
+  const idSet = new Set(ids);
+  const stateCopy = state.map((ele) =>
+    idSet.has(ele.id) ? moveElement(ele, dx, dy) : ele
+  );
+  setState(stateCopy, overwrite);
+}
+
+export function deleteElementsByIds(
+  ids: string[],
+  setState: (action: (prev: DrawElement[]) => DrawElement[]) => void,
+  setSelectedElement: React.Dispatch<React.SetStateAction<SelectedElement | null>>,
+  setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>
+): void {
+  if (ids.length === 0) return;
+  const idSet = new Set(ids);
+  setState((prevState) => prevState.filter((element) => !idSet.has(element.id)));
+  setSelectedElement(null);
+  setSelectedIds([]);
+}
+
 export function deleteElement(
   s_element: SelectedElement | null,
   setState: (action: (prev: DrawElement[]) => DrawElement[]) => void,
-  setSelectedElement: React.Dispatch<React.SetStateAction<SelectedElement | null>>
+  setSelectedElement: React.Dispatch<React.SetStateAction<SelectedElement | null>>,
+  setSelectedIds?: React.Dispatch<React.SetStateAction<string[]>>
 ): void {
   if (!s_element) return;
-
-  const { id } = s_element;
-  setState((prevState) => prevState.filter((element) => element.id !== id));
-  setSelectedElement(null);
+  if (setSelectedIds) {
+    deleteElementsByIds([s_element.id], setState, setSelectedElement, setSelectedIds);
+  } else {
+    const { id } = s_element;
+    setState((prevState) => prevState.filter((element) => element.id !== id));
+    setSelectedElement(null);
+  }
 }
 
 export function duplicateElement(
@@ -354,7 +433,8 @@ export function duplicateElement(
   setState: (action: (prev: DrawElement[]) => DrawElement[]) => void,
   setSelected: React.Dispatch<React.SetStateAction<SelectedElement | null>>,
   factor: number,
-  offsets: { offsetX?: number; offsetY?: number } = {}
+  offsets: { offsetX?: number; offsetY?: number } = {},
+  setSelectedIds?: React.Dispatch<React.SetStateAction<string[]>>
 ): void {
   if (!s_element) return;
 
@@ -365,12 +445,41 @@ export function duplicateElement(
         if (element.id === id) {
           const duplicated = { ...moveElement(element, factor), id: uuid() };
           setSelected({ ...duplicated, ...offsets });
+          setSelectedIds?.([duplicated.id]);
           return [element, duplicated];
         }
         return element;
       })
       .flat() as DrawElement[]
   );
+}
+
+export function duplicateSelectedElements(
+  ids: string[],
+  setState: (action: (prev: DrawElement[]) => DrawElement[]) => void,
+  setSelected: React.Dispatch<React.SetStateAction<SelectedElement | null>>,
+  setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>,
+  factor: number
+): void {
+  if (ids.length === 0) return;
+  const idSet = new Set(ids);
+  setState((prevState) => {
+    const newIds: string[] = [];
+    const next = prevState.flatMap((element) => {
+      if (!idSet.has(element.id)) return [element];
+      const duplicated = { ...moveElement(element, factor), id: uuid() };
+      newIds.push(duplicated.id);
+      return [element, duplicated];
+    });
+    setSelectedIds(newIds);
+    if (newIds.length === 1) {
+      const el = next.find((e) => e.id === newIds[0]);
+      setSelected(el ? ({ ...el } as SelectedElement) : null);
+    } else {
+      setSelected(null);
+    }
+    return next;
+  });
 }
 
 export function moveElement(
@@ -393,6 +502,12 @@ export function moveElement(
       y: p.y + fy,
     }));
   }
+  if (element.tool === "pencil" && "points" in element) {
+    (extras as { points: Point[] }).points = element.points.map((p) => ({
+      x: p.x + factorX,
+      y: p.y + fy,
+    }));
+  }
 
   return {
     ...element,
@@ -401,7 +516,7 @@ export function moveElement(
     x2: element.x2 + factorX,
     y2: element.y2 + fy,
     ...extras,
-  };
+  } as DrawElement;
 }
 
 export function moveElementLayer(

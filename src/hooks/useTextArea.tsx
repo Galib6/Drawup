@@ -17,7 +17,8 @@ interface TextAreaElement {
 
 export default function useTextArea(): (
   element: TextAreaElement,
-  update?: boolean
+  update?: boolean,
+  embedded?: boolean
 ) => void {
   const { elements, setElements, scale, translate, scaleOffset, setRerender } =
     useAppContext();
@@ -31,10 +32,14 @@ export default function useTextArea(): (
     return { x, y };
   };
 
-  function createTextArea(element: TextAreaElement, update = false): void {
+  function createTextArea(
+    element: TextAreaElement,
+    update = false,
+    embedded = false
+  ): void {
     const { id, x1, y1, text, strokeColor } = element;
-    const fontSizeKey = element.fontSize || 'M';
-    const align = element.textAlign || 'left';
+    const fontSizeKey = element.fontSize || "M";
+    const align = element.textAlign || "left";
     const fontPx = FONT_SIZE_MAP[fontSizeKey] || 30;
     writing(id);
 
@@ -42,20 +47,103 @@ export default function useTextArea(): (
     const textarea = document.createElement("textarea");
     textarea.id = id;
     textarea.className = "textBox";
-    textarea.style.top = canvasToWindow(x1, y1).y + "px";
-    textarea.style.left = canvasToWindow(x1, y1).x + "px";
     textarea.style.fontSize = fontPx * scale + "px";
     textarea.style.textAlign = align;
     textarea.style.color = strokeColor;
-    textarea.textContent = text;
+    textarea.value = text;
+
+    textarea.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    });
+
+    const setElementsTyped = setElements as (
+      action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
+      overwrite?: boolean
+    ) => void;
+
+    if (embedded) {
+      const left = Math.min(x1, element.x2);
+      const top = Math.min(y1, element.y2);
+      const w = Math.abs(element.x2 - x1);
+      const h = Math.abs(element.y2 - y1);
+      const pos = canvasToWindow(left, top);
+      const hostW = Math.max(w, 4) * scale;
+      const hostH = Math.max(h, fontPx * 0.5) * scale;
+
+      const host = document.createElement("div");
+      host.style.position = "absolute";
+      host.style.left = pos.x + "px";
+      host.style.top = pos.y + "px";
+      host.style.width = hostW + "px";
+      host.style.height = hostH + "px";
+      host.style.pointerEvents = "auto";
+      host.style.zIndex = "30";
+      host.style.boxSizing = "border-box";
+      host.style.overflow = "hidden";
+
+      textarea.style.position = "absolute";
+      textarea.style.left = "0";
+      textarea.style.width = "100%";
+      textarea.style.margin = "0";
+      textarea.style.padding = "0";
+      textarea.style.border = "none";
+      textarea.style.background = "transparent";
+      textarea.style.outline = "none";
+      textarea.style.overflow = "auto";
+      textarea.style.overflowWrap = "break-word";
+      textarea.style.whiteSpace = "pre-wrap";
+      textarea.style.resize = "none";
+      textarea.style.boxSizing = "border-box";
+      textarea.style.textAlign = "center";
+      textarea.style.fontFamily = "Excalifont, cursive";
+      textarea.style.lineHeight = "1.15";
+
+      const syncEmbeddedLayout = (): void => {
+        textarea.style.height = "auto";
+        const maxH = host.clientHeight;
+        const minLine = fontPx * scale * 1.15;
+        const sh = Math.max(textarea.scrollHeight, minLine);
+        const boxH = Math.min(sh, maxH);
+        textarea.style.height = boxH + "px";
+        const topPx = Math.max(0, (maxH - boxH) / 2);
+        textarea.style.top = topPx + "px";
+      };
+
+      host.appendChild(textarea);
+      document.body.appendChild(host);
+      textarea.focus();
+
+      requestAnimationFrame(() => {
+        syncEmbeddedLayout();
+        if (update) textarea.setSelectionRange(0, textarea.value.length);
+      });
+
+      textarea.addEventListener("input", () => {
+        updateElement(
+          id,
+          { text: textarea.value },
+          setElementsTyped,
+          elements,
+          true
+        );
+        syncEmbeddedLayout();
+      });
+
+      textarea.addEventListener("focusout", () => {
+        writing(null);
+        setRerender((state) => !state);
+        document.body.removeChild(host);
+      });
+      return;
+    }
+
     document.body.appendChild(textarea);
     textarea.focus();
 
     if (update) textarea.setSelectionRange(0, text.length);
 
-    textarea.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-    });
+    textarea.style.top = canvasToWindow(x1, y1).y + "px";
+    textarea.style.left = canvasToWindow(x1, y1).x + "px";
 
     function getTextWidth(text: string): number {
       const canvas = document.createElement("canvas");
@@ -119,10 +207,7 @@ export default function useTextArea(): (
       updateElement(
         id,
         { text: target.value, ...xy },
-        setElements as (
-          action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
-          overwrite?: boolean
-        ) => void,
+        setElementsTyped,
         elements,
         true
       );

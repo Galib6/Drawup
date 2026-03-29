@@ -1,3 +1,4 @@
+import { getElementById } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
 import Collaboration from "./Collaboration";
 import Credits from "./Credits";
@@ -8,7 +9,13 @@ import UndoRedo from "./UndoRedo";
 import Zoom from "./Zoom";
 
 export default function Ui(): JSX.Element {
-  const { selectedElement, selectedTool, style } = useAppContext();
+  const { selectedElement, selectedTool, style, selectedIds, elements } =
+    useAppContext();
+
+  const primaryForStyle =
+    selectedIds.length > 0
+      ? getElementById(selectedIds[0], elements)
+      : selectedElement;
 
   return (
     <main className="ui">
@@ -17,8 +24,10 @@ export default function Ui(): JSX.Element {
         <ToolBar />
         <Collaboration />
       </header>
-      {(!["selection", "hand"].includes(selectedTool) || selectedElement) && (
-        <Style selectedElement={selectedElement || style} />
+      {(!["selection", "hand"].includes(selectedTool) ||
+        selectedIds.length > 0 ||
+        selectedElement) && (
+        <Style selectedElement={primaryForStyle || style} />
       )}
 
       <footer>

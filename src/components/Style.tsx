@@ -15,13 +15,13 @@ import {
 } from "../assets/icons";
 import { BACKGROUND_COLORS, STROKE_COLORS, STROKE_STYLES } from "../global/var";
 import {
-  deleteElement,
-  duplicateElement,
+  deleteElementsByIds,
+  duplicateSelectedElements,
   getElementById,
   measureTextBounds,
   minmax,
   moveElementLayer,
-  updateElement,
+  updateElementsByIds,
 } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
 import { ArrowType, Arrowheads, DrawElement, ElementStyle, FontSize, SelectedElement, TextAlign } from "../types";
@@ -45,7 +45,15 @@ interface StyleProps {
 }
 
 export default function Style({ selectedElement }: StyleProps): JSX.Element | null {
-  const { elements, setElements, setSelectedElement, setStyle, selectedTool } = useAppContext();
+  const {
+    elements,
+    setElements,
+    setSelectedElement,
+    setSelectedIds,
+    setStyle,
+    selectedTool,
+    selectedIds,
+  } = useAppContext();
 
   const [elementStyle, setElementStyle] = useState<ElementStyleState>({
     fill: selectedElement?.fill,
@@ -88,10 +96,53 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
 
   if (!selectedElement) return null;
 
-  const selectedId = isSelectedElement(selectedElement) ? selectedElement.id : undefined;
-  const isText = isSelectedElement(selectedElement)
-    ? selectedElement.tool === 'text'
-    : selectedTool === 'text';
+  const styleTargetIds =
+    selectedIds.length > 0
+      ? selectedIds
+      : isSelectedElement(selectedElement)
+        ? [selectedElement.id]
+        : [];
+
+  const primaryEl =
+    selectedIds.length > 0
+      ? getElementById(selectedIds[0], elements)
+      : isSelectedElement(selectedElement)
+        ? selectedElement
+        : undefined;
+
+  const isText =
+    styleTargetIds.length > 0 &&
+    styleTargetIds.every(
+      (id) => getElementById(id, elements)?.tool === "text"
+    );
+
+  const showArrowStyle =
+    styleTargetIds.length === 0
+      ? selectedTool === "arrow"
+      : styleTargetIds.every((id) => getElementById(id, elements)?.tool === "arrow");
+
+  const showRectRadius =
+    styleTargetIds.length === 0
+      ? selectedTool === "rectangle" ||
+        (selectedTool === "arrow" && elementStyle.arrowType === "elbowed")
+      : styleTargetIds.every((id) => {
+          const e = getElementById(id, elements);
+          return (
+            e?.tool === "rectangle" ||
+            (e?.tool === "arrow" && e.arrowType === "elbowed")
+          );
+        });
+
+  const edgesLabel =
+    styleTargetIds.length === 0
+      ? selectedTool === "arrow" && elementStyle.arrowType === "elbowed"
+        ? "Bend radius"
+        : "Edges"
+      : styleTargetIds.every(
+          (id) => getElementById(id, elements)?.tool === "arrow"
+        )
+        ? "Bend radius"
+        : "Edges";
 
   return (
     <section className="styleOptions">
@@ -110,9 +161,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               }
               onClick={() => {
                 setStylesStates({ strokeColor: color });
-                if (selectedId) {
-                  updateElement(
-                    selectedId,
+                if (styleTargetIds.length > 0) {
+                  updateElementsByIds(
+                    styleTargetIds,
                     { strokeColor: color },
                     setElements as (
                       action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -143,9 +194,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                 key={index}
                 onClick={() => {
                   setStylesStates({ fill });
-                  if (selectedId) {
-                    updateElement(
-                      selectedId,
+                  if (styleTargetIds.length > 0) {
+                    updateElementsByIds(
+                      styleTargetIds,
                       { fill },
                       setElements as (
                         action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -173,9 +224,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             }
             onClick={() => {
               setStylesStates({ strokeWidth: 2 });
-              if (selectedId) {
-                updateElement(
-                  selectedId,
+              if (styleTargetIds.length > 0) {
+                updateElementsByIds(
+                  styleTargetIds,
                   { strokeWidth: 2 },
                   setElements as (
                     action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -199,9 +250,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             }
             onClick={() => {
               setStylesStates({ strokeWidth: 5 });
-              if (selectedId) {
-                updateElement(
-                  selectedId,
+              if (styleTargetIds.length > 0) {
+                updateElementsByIds(
+                  styleTargetIds,
                   { strokeWidth: 5 },
                   setElements as (
                     action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -225,9 +276,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             }
             onClick={() => {
               setStylesStates({ strokeWidth: 10 });
-              if (selectedId) {
-                updateElement(
-                  selectedId,
+              if (styleTargetIds.length > 0) {
+                updateElementsByIds(
+                  styleTargetIds,
                   { strokeWidth: 10 },
                   setElements as (
                     action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -260,9 +311,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               key={index}
               onClick={() => {
                 setStylesStates({ strokeStyle: style.slug });
-                if (selectedId) {
-                  updateElement(
-                    selectedId,
+                if (styleTargetIds.length > 0) {
+                  updateElementsByIds(
+                    styleTargetIds,
                     { strokeStyle: style.slug },
                     setElements as (
                       action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -292,9 +343,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             }
             onClick={() => {
               setStylesStates({ roughness: 0 });
-              if (selectedId) {
-                updateElement(
-                  selectedId,
+              if (styleTargetIds.length > 0) {
+                updateElementsByIds(
+                  styleTargetIds,
                   { roughness: 0 },
                   setElements as (
                     action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -318,9 +369,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             }
             onClick={() => {
               setStylesStates({ roughness: 1 });
-              if (selectedId) {
-                updateElement(
-                  selectedId,
+              if (styleTargetIds.length > 0) {
+                updateElementsByIds(
+                  styleTargetIds,
                   { roughness: 1 },
                   setElements as (
                     action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -344,9 +395,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             }
             onClick={() => {
               setStylesStates({ roughness: 2 });
-              if (selectedId) {
-                updateElement(
-                  selectedId,
+              if (styleTargetIds.length > 0) {
+                updateElementsByIds(
+                  styleTargetIds,
                   { roughness: 2 },
                   setElements as (
                     action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -381,18 +432,25 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                   }
                   onClick={() => {
                     setStylesStates({ fontSize: size });
-                    if (selectedId) {
-                      const el = getElementById(selectedId, elements);
-                      const text = el && 'text' in el ? (el as { text: string }).text : '';
-                      const bounds = measureTextBounds(text, size, el?.x1 ?? 0, el?.y1 ?? 0);
-                      updateElement(
-                        selectedId,
-                        { fontSize: size, ...bounds },
-                        setElements as (
-                          action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
-                          overwrite?: boolean
-                        ) => void,
-                        elements
+                    if (styleTargetIds.length > 0) {
+                      setElements(
+                        (prev) =>
+                          prev.map((el) => {
+                            if (!styleTargetIds.includes(el.id)) return el;
+                            if (el.tool !== "text" || !("text" in el)) return el;
+                            const bounds = measureTextBounds(
+                              el.text,
+                              size,
+                              el.x1,
+                              el.y1
+                            );
+                            return {
+                              ...el,
+                              fontSize: size,
+                              ...bounds,
+                            } as DrawElement;
+                          }),
+                        false
                       );
                     }
                   }}
@@ -420,9 +478,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                   }
                   onClick={() => {
                     setStylesStates({ textAlign: align });
-                    if (selectedId) {
-                      updateElement(
-                        selectedId,
+                    if (styleTargetIds.length > 0) {
+                      updateElementsByIds(
+                        styleTargetIds,
                         { textAlign: align },
                         setElements as (
                           action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -442,7 +500,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           </div>
         </>
       )}
-      {(isSelectedElement(selectedElement) ? selectedElement.tool === 'arrow' : selectedTool === 'arrow') && (
+      {showArrowStyle && (
         <>
           <div className="group arrowType">
             <p>Arrow type</p>
@@ -462,9 +520,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                   }
                   onClick={() => {
                     setStylesStates({ arrowType: type });
-                    if (selectedId) {
-                      updateElement(
-                        selectedId,
+                    if (styleTargetIds.length > 0) {
+                      updateElementsByIds(
+                        styleTargetIds,
                         { arrowType: type },
                         setElements as (
                           action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -497,9 +555,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                   }
                   onClick={() => {
                     setStylesStates({ arrowheads: type });
-                    if (selectedId) {
-                      updateElement(
-                        selectedId,
+                    if (styleTargetIds.length > 0) {
+                      updateElementsByIds(
+                        styleTargetIds,
                         { arrowheads: type },
                         setElements as (
                           action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -517,18 +575,16 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           </div>
         </>
       )}
-      {isSelectedElement(selectedElement) &&
-        (selectedElement.tool === 'rectangle' ||
-          (selectedElement.tool === 'arrow' && selectedElement.arrowType === 'elbowed')) && (
+      {showRectRadius && (
         <div className="group edges">
-          <p>{selectedElement.tool === 'arrow' ? 'Bend radius' : 'Edges'}</p>
+          <p>{edgesLabel}</p>
           <div className="innerGroup">
             <button
               type="button"
               title={
-                selectedElement.tool === 'arrow'
-                  ? 'Auto bend (follows arrow size, max 40px)'
-                  : 'Sharp edges'
+                edgesLabel === "Bend radius"
+                  ? "Auto bend (follows arrow size, max 40px)"
+                  : "Sharp edges"
               }
               className={
                 "itemButton option" +
@@ -536,9 +592,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               }
               onClick={() => {
                 setStylesStates({ borderRadius: 0 });
-                if (selectedId) {
-                  updateElement(
-                    selectedId,
+                if (styleTargetIds.length > 0) {
+                  updateElementsByIds(
+                    styleTargetIds,
                     { borderRadius: 0 },
                     setElements as (
                       action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -556,9 +612,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             <button
               type="button"
               title={
-                selectedElement.tool === 'arrow'
-                  ? 'Set explicit bend radius (slider)'
-                  : 'Rounded edges'
+                edgesLabel === "Bend radius"
+                  ? "Set explicit bend radius (slider)"
+                  : "Rounded edges"
               }
               className={
                 "itemButton option" +
@@ -566,9 +622,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               }
               onClick={() => {
                 setStylesStates({ borderRadius: 15 });
-                if (selectedId) {
-                  updateElement(
-                    selectedId,
+                if (styleTargetIds.length > 0) {
+                  updateElementsByIds(
+                    styleTargetIds,
                     { borderRadius: 15 },
                     setElements as (
                       action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -596,9 +652,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                   setStylesStates({
                     borderRadius: minmax(+target.value, [0, 100]),
                   });
-                  if (selectedId) {
-                    updateElement(
-                      selectedId,
+                  if (styleTargetIds.length > 0) {
+                    updateElementsByIds(
+                      styleTargetIds,
                       { borderRadius: minmax(+target.value, [0, 100]) },
                       setElements as (
                         action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -629,9 +685,9 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                 setStylesStates({
                   opacity: minmax(+target.value, [0, 100]),
                 });
-                if (selectedId) {
-                  updateElement(
-                    selectedId,
+                if (styleTargetIds.length > 0) {
+                  updateElementsByIds(
+                    styleTargetIds,
                     { opacity: minmax(+target.value, [0, 100]) },
                     setElements as (
                       action: DrawElement[] | ((prev: DrawElement[]) => DrawElement[]),
@@ -646,73 +702,75 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           </div>
         </div>
       )}
-      {isSelectedElement(selectedElement) && (
+      {styleTargetIds.length > 0 && (
         <React.Fragment>
-          <div className="group layers">
-            <p>Layers</p>
-            <div className="innerGroup">
-              <button
-                type="button"
-                className="itemButton option"
-                title="Send to back"
-                onClick={() =>
-                  moveElementLayer(
-                    selectedElement.id,
-                    0,
-                    setElements as (action: DrawElement[]) => void,
-                    elements
-                  )
-                }
-              >
-                <ToBack />
-              </button>
-              <button
-                type="button"
-                className="itemButton option"
-                title="Send backward"
-                onClick={() =>
-                  moveElementLayer(
-                    selectedElement.id,
-                    -1,
-                    setElements as (action: DrawElement[]) => void,
-                    elements
-                  )
-                }
-              >
-                <Backward />
-              </button>
-              <button
-                type="button"
-                className="itemButton option"
-                title="Bring forward"
-                onClick={() =>
-                  moveElementLayer(
-                    selectedElement.id,
-                    1,
-                    setElements as (action: DrawElement[]) => void,
-                    elements
-                  )
-                }
-              >
-                <Forward />
-              </button>
-              <button
-                type="button"
-                className="itemButton option"
-                title="Bring to front"
-                onClick={() =>
-                  moveElementLayer(
-                    selectedElement.id,
-                    2,
-                    setElements as (action: DrawElement[]) => void,
-                    elements
-                  )
-                }
-              >
-                <ToFront />
-              </button>
+          {styleTargetIds.length === 1 && (
+            <div className="group layers">
+              <p>Layers</p>
+              <div className="innerGroup">
+                <button
+                  type="button"
+                  className="itemButton option"
+                  title="Send to back"
+                  onClick={() =>
+                    moveElementLayer(
+                      styleTargetIds[0],
+                      0,
+                      setElements as (action: DrawElement[]) => void,
+                      elements
+                    )
+                  }
+                >
+                  <ToBack />
+                </button>
+                <button
+                  type="button"
+                  className="itemButton option"
+                  title="Send backward"
+                  onClick={() =>
+                    moveElementLayer(
+                      styleTargetIds[0],
+                      -1,
+                      setElements as (action: DrawElement[]) => void,
+                      elements
+                    )
+                  }
+                >
+                  <Backward />
+                </button>
+                <button
+                  type="button"
+                  className="itemButton option"
+                  title="Bring forward"
+                  onClick={() =>
+                    moveElementLayer(
+                      styleTargetIds[0],
+                      1,
+                      setElements as (action: DrawElement[]) => void,
+                      elements
+                    )
+                  }
+                >
+                  <Forward />
+                </button>
+                <button
+                  type="button"
+                  className="itemButton option"
+                  title="Bring to front"
+                  onClick={() =>
+                    moveElementLayer(
+                      styleTargetIds[0],
+                      2,
+                      setElements as (action: DrawElement[]) => void,
+                      elements
+                    )
+                  }
+                >
+                  <ToFront />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="group actions">
             <p>Actions</p>
@@ -722,12 +780,13 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                 className="itemButton option"
                 title="Duplicate ~ Ctrl + d"
                 onClick={() =>
-                  duplicateElement(
-                    selectedElement,
+                  duplicateSelectedElements(
+                    styleTargetIds,
                     setElements as (
                       action: (prev: DrawElement[]) => DrawElement[]
                     ) => void,
                     setSelectedElement,
+                    setSelectedIds,
                     10
                   )
                 }
@@ -737,12 +796,13 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
               <button
                 type="button"
                 onClick={() =>
-                  deleteElement(
-                    selectedElement,
+                  deleteElementsByIds(
+                    styleTargetIds,
                     setElements as (
                       action: (prev: DrawElement[]) => DrawElement[]
                     ) => void,
-                    setSelectedElement
+                    setSelectedElement,
+                    setSelectedIds
                   )
                 }
                 title="Delete"

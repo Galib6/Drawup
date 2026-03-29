@@ -970,7 +970,46 @@ export function draw(element: DrawElement, context: CanvasRenderingContext2D): v
     if (strokeWidth > 0) context.stroke();
   }
 
+  drawShapeEmbeddedLabel(element, context);
+
   context.closePath();
+}
+
+function drawShapeEmbeddedLabel(
+  element: DrawElement,
+  context: CanvasRenderingContext2D
+): void {
+  if (element.tool === "text" || element.tool === "pencil") return;
+  const label = element.text;
+  if (label === undefined || label === "") return;
+  if (element.id === textWriting) return;
+
+  const left = Math.min(element.x1, element.x2);
+  const right = Math.max(element.x1, element.x2);
+  const top = Math.min(element.y1, element.y2);
+  const bottom = Math.max(element.y1, element.y2);
+  const width = right - left;
+  const height = bottom - top;
+  if (width < 4 || height < 4) return;
+
+  const fontSizeKey = element.fontSize || "M";
+  const px = FONT_SIZE_MAP[fontSizeKey] || 30;
+  const lines = label.split("\n");
+  const lineHeight = px * 1.15;
+  const totalH = lines.length * lineHeight;
+  const centerX = left + width / 2;
+  const startY = Math.max(top, top + (height - totalH) / 2);
+
+  context.save();
+  context.font = `${px}px Excalifont, cursive`;
+  context.textBaseline = "top";
+  context.fillStyle = element.strokeColor;
+  context.textAlign = "center";
+
+  lines.forEach((line, i) => {
+    context.fillText(line, centerX, startY + i * lineHeight);
+  });
+  context.restore();
 }
 
 export function inSelectedCorner(
