@@ -57,9 +57,8 @@ export function elbowBendRadius(
 
 /**
  * Build the full list of axis-aligned corner vertices for an elbow path.
- * - 0 midpoints: classic 3-segment Z-path (H-V-H) through horizontal midpoint.
- * - 1+ midpoints: staircase — H-V L-shapes for intermediate pairs, Z-path for
- *   the last pair so the arrowhead ends on a horizontal segment.
+ * For the last segment pair, picks H-V-H or V-H-V based on which dimension
+ * is dominant so the arrowhead points in all four directions (not just left/right).
  */
 export function elbowCornerVertices(
   x1: number, y1: number,
@@ -84,9 +83,18 @@ export function elbowCornerVertices(
     if (i === 0) pushIfNew(a);
 
     if (isLast) {
-      const midX = a.x + (b.x - a.x) / 2;
-      pushIfNew({ x: midX, y: a.y });
-      pushIfNew({ x: midX, y: b.y });
+      const dx = Math.abs(b.x - a.x);
+      const dy = Math.abs(b.y - a.y);
+
+      if (dx >= dy) {
+        const midX = a.x + (b.x - a.x) / 2;
+        pushIfNew({ x: midX, y: a.y });
+        pushIfNew({ x: midX, y: b.y });
+      } else {
+        const midY = a.y + (b.y - a.y) / 2;
+        pushIfNew({ x: a.x, y: midY });
+        pushIfNew({ x: b.x, y: midY });
+      }
       pushIfNew(b);
     } else {
       pushIfNew({ x: b.x, y: a.y });
