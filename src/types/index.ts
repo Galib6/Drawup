@@ -185,6 +185,9 @@ export interface CreateElementParams {
   text?: string;
 }
 
+/** When set, the canvas was loaded from this archived diagram (enables “Save” on that row). */
+export type ActiveArchiveDiagram = { folderId: string; designId: string };
+
 // App context type
 export interface AppContextType {
   action: ActionType;
@@ -215,9 +218,13 @@ export interface AppContextType {
   setSelectedIds: React.Dispatch<React.SetStateAction<string[]>>;
   undo: () => void;
   redo: () => void;
+  /** Local mode: true when undo stack has prior state (edits to lose). Ignored for dirty check when session is set. */
+  canUndo: boolean;
   session: string | null;
   setSession: React.Dispatch<React.SetStateAction<string | null>>;
   setToDefault: () => void;
+  activeArchiveDiagram: ActiveArchiveDiagram | null;
+  setActiveArchiveDiagram: React.Dispatch<React.SetStateAction<ActiveArchiveDiagram | null>>;
   rerender: boolean;
   setRerender: React.Dispatch<React.SetStateAction<boolean>>;
 }

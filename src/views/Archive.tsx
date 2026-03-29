@@ -2,21 +2,31 @@ import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArchiveBox, ChevronLeft, Delete } from "../assets/icons";
 import AuthHeaderAccount from "../components/AuthHeaderAccount";
-import { addFolder, readArchive, removeDesign, removeFolder } from "../helper/archiveStorage";
+import {
+  formatDiagramTimestamp,
+  loadArchivedDiagramWithPrompts,
+  saveCurrentDiagramToArchive,
+} from "../helper/archiveLoadFlow";
+import { addFolder, readArchive, removeDesign, removeFolder, updateDesign } from "../helper/archiveStorage";
 import { useAppContext } from "../provider/AppStates";
 import { useModal } from "../provider/ModalContext";
 import type { ArchiveFolder } from "../types/archive";
-import type { DrawElement } from "../types";
 
 export default function Archive(): JSX.Element {
   const navigate = useNavigate();
   const modal = useModal();
-  const { setElements } = useAppContext();
+  const { setElements, elements, canUndo, session, activeArchiveDiagram, setActiveArchiveDiagram } =
+    useAppContext();
   const [data, setData] = useState(readArchive);
 
   const refresh = useCallback((): void => {
     setData(readArchive());
   }, []);
+
+  const handleSaveCurrentCanvas = async (): Promise<void> => {
+    const ok = await saveCurrentDiagramToArchive(modal, elements);
+    if (ok) refresh();
+  };
 
   const handleNewFolder = async (): Promise<void> => {
     const result = await modal.openForm({
@@ -55,12 +65,29 @@ export default function Archive(): JSX.Element {
     refresh();
   };
 
-  const handleOpenDiagram = (folderId: string, designId: string): void => {
+  const handleOpenDiagram = async (folderId: string, designId: string): Promise<void> => {
     const folder = data.folders.find((f) => f.id === folderId);
     const diagram = folder?.designs.find((d) => d.id === designId);
     if (!diagram) return;
-    setElements(JSON.parse(JSON.stringify(diagram.elements)) as DrawElement[], true);
-    navigate("/");
+    await loadArchivedDiagramWithPrompts(
+      modal,
+      elements,
+      canUndo,
+      session,
+      folderId,
+      diagram,
+      setElements,
+      (info) => {
+        setActiveArchiveDiagram(info);
+        navigate("/");
+      }
+    );
+    refresh();
+  };
+
+  const handleUpdateArchivedDiagram = (folderId: string, designId: string): void => {
+    if (!updateDesign(folderId, designId, elements)) return;
+    refresh();
   };
 
   const handleDeleteDiagram = async (folderId: string, designId: string): Promise<void> => {
@@ -72,18 +99,13 @@ export default function Archive(): JSX.Element {
     });
     if (!ok) return;
     removeDesign(folderId, designId);
-    refresh();
-  };
-
-  const formatDate = (ts: number): string => {
-    try {
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "short",
-        timeStyle: "short",
-      }).format(new Date(ts));
-    } catch {
-      return new Date(ts).toLocaleString();
+    if (
+      activeArchiveDiagram?.folderId === folderId &&
+      activeArchiveDiagram?.designId === designId
+    ) {
+      setActiveArchiveDiagram(null);
     }
+    refresh();
   };
 
   return (
@@ -103,12 +125,19 @@ export default function Archive(): JSX.Element {
                   <ArchiveBox /> Archive
                 </h1>
                 <p className="archiveHint">
-                  Stored in this browser only (local storage). Save from the canvas menu:{" "}
-                  <strong>Save to archive</strong> — pick folder and diagram name in the popup.
+                  Stored in this browser only (local storage). Use <strong>Save current canvas</strong> here or{" "}
+                  <strong>Save to archive</strong> in the menu — then pick folder and name in the popup.
                 </p>
               </div>
             </div>
             <div className="archiveTopActions">
+              <button
+                className="archiveSaveCanvas"
+                type="button"
+                onClick={() => void handleSaveCurrentCanvas()}
+              >
+                Save current canvas
+              </button>
               <button className="archiveNewFolder" type="button" onClick={() => void handleNewFolder()}>
                 New folder
               </button>
@@ -142,19 +171,36 @@ export default function Archive(): JSX.Element {
                   {folder.designs.length === 0 ? (
                     <li className="archiveDiagramPlaceholder">No diagrams yet</li>
                   ) : (
-                    folder.designs.map((diagram) => (
+                    folder.designs.map((diagram) => {
+                      const isCanvasSameDiagram =
+                        activeArchiveDiagram?.folderId === folder.id &&
+                        activeArchiveDiagram?.designId === diagram.id;
+                      return (
                       <li key={diagram.id} className="archiveDiagramTile">
+                        <div className="archiveDiagramTileLogo" aria-hidden>
+                          <ArchiveBox />
+                        </div>
                         <div className="archiveDiagramTileMain">
                           <span className="archiveDiagramTileName">{diagram.name}</span>
                           <span className="archiveDiagramTileMeta">
-                            {diagram.elements.length} elements · {formatDate(diagram.updatedAt)}
+                            {diagram.elements.length} elements · {formatDiagramTimestamp(diagram.updatedAt)}
                           </span>
                         </div>
                         <div className="archiveDiagramTileActions">
+                          {isCanvasSameDiagram ? (
+                            <button
+                              className="archiveBtnSave"
+                              type="button"
+                              title="Update archive with current canvas"
+                              onClick={() => handleUpdateArchivedDiagram(folder.id, diagram.id)}
+                            >
+                              Save
+                            </button>
+                          ) : null}
                           <button
                             className="archiveBtnOpen"
                             type="button"
-                            onClick={() => handleOpenDiagram(folder.id, diagram.id)}
+                            onClick={() => void handleOpenDiagram(folder.id, diagram.id)}
                           >
                             Open
                           </button>
@@ -168,7 +214,8 @@ export default function Archive(): JSX.Element {
                           </button>
                         </div>
                       </li>
-                    ))
+                      );
+                    })
                   )}
                 </ul>
               </article>

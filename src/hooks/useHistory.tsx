@@ -11,7 +11,8 @@ export default function useHistory(
   DrawElement[],
   (action: SetStateAction, overwrite?: boolean, emit?: boolean) => void,
   () => void,
-  () => void
+  () => void,
+  boolean
 ] {
   const [history, setHistory] = useState<DrawElement[][]>([initialState]);
   const [index, setIndex] = useState<number>(0);
@@ -62,5 +63,7 @@ export default function useHistory(
     );
   }, [history.length]);
 
-  return [history[index], setState, undo, redo];
+  const canUndo = index > 0;
+
+  return [history[index], setState, undo, redo, canUndo];
 }

@@ -95,6 +95,8 @@ main.ui {
 }
 
 main.ui header {
+  position: relative;
+  z-index: 10002;
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   align-items: start;
@@ -114,6 +116,7 @@ main.ui header > .menu {
   gap: 8px;
   width: 100%;
   min-width: 0;
+  pointer-events: all;
 }
 
 main.ui header > .headerChromeRight {
@@ -286,6 +289,7 @@ main.ui footer {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  pointer-events: all;
 }
 
 main.ui footer > div {
@@ -620,6 +624,18 @@ div.menu {
   pointer-events: all;
 }
 
+div.menu .menuToolbar {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+div.menu .menuArchiveSidebarBtnActive {
+  background: var(--accent-purple-soft);
+  color: #4338ca;
+}
+
 div.menu .menuBtn {
   display: grid;
   place-content: center;
@@ -638,10 +654,23 @@ div.menu .menuBtn:hover {
   background: var(--accent-purple-soft);
 }
 
-div.menu .menuItems {
+/* Hamburger + optional archive flyout sit in one row below the menu button */
+div.menu .menuSurfaces {
   position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  z-index: 9999;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+div.menu .menuItems {
+  position: relative;
   background: #ffffff;
-  margin-top: 10px;
+  margin-top: 0;
   z-index: 9999;
   padding: 8px;
   width: 250px;
@@ -650,6 +679,7 @@ div.menu .menuItems {
   border: none;
   border-radius: 12px;
   box-shadow: var(--canvas-chrome-shadow);
+  flex-shrink: 0;
 }
 
 div.menu .menuItems .menuItem * {
@@ -673,6 +703,342 @@ div.menu .menuItems .menuItem {
 
 div.menu .menuItems .menuItem:hover {
   background: var(--accent-purple-soft);
+}
+
+/* Archive row in main menu — opens secondary “hamburger-style” flyout */
+div.menu .menuItems .menuArchiveEntry {
+  width: 100%;
+  padding: 10px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 8px;
+  font-family: secondaryFont;
+  font-size: inherit;
+  color: #373737;
+}
+
+div.menu .menuItems .menuArchiveEntry:hover {
+  background: var(--accent-purple-soft);
+}
+
+div.menu .menuItems .menuArchiveEntryActive {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+div.menu .menuItems .menuArchiveEntryMain {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+div.menu .menuItems .menuArchiveEntryChevron {
+  flex-shrink: 0;
+  display: grid;
+  place-content: center;
+  color: #495057;
+}
+
+/* Archive drawer — no full-screen mask; canvas stays usable while open */
+div.menu .menuArchiveFlyout {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  z-index: 1;
+  width: min(280px, calc(100vw - 48px));
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: var(--canvas-chrome-shadow);
+  display: flex;
+  flex-direction: column;
+  max-height: min(420px, 70vh);
+}
+
+div.menu .menuArchiveFlyoutHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  flex-shrink: 0;
+}
+
+div.menu .menuArchiveFlyoutTitle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: secondaryFont;
+  font-size: inherit;
+  color: #373737;
+}
+
+div.menu .menuArchiveFlyoutClose {
+  display: grid;
+  place-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #495057;
+  cursor: pointer;
+}
+
+div.menu .menuArchiveFlyoutClose:hover {
+  background: var(--accent-purple-soft);
+}
+
+div.menu .menuArchiveFlyoutClose svg {
+  width: 16px;
+  height: 16px;
+}
+
+div.menu .menuArchiveFlyoutBody {
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveAddRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 8px 8px 10px;
+  margin-bottom: 6px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  font-family: secondaryFont;
+  font-size: inherit;
+  color: #373737;
+  text-align: left;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveAddRow:hover {
+  background: rgba(15, 23, 42, 0.07);
+}
+
+div.menu .menuArchiveFlyout .menuArchiveSaveCanvasRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 8px 8px 10px;
+  margin-bottom: 6px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent-purple-soft);
+  cursor: pointer;
+  font-family: secondaryFont;
+  font-size: inherit;
+  font-weight: 500;
+  color: #4338ca;
+  text-align: left;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveSaveCanvasRow:hover {
+  background: rgba(73, 67, 243, 0.2);
+}
+
+div.menu .menuArchiveFlyout .menuArchiveSaveCanvasRow:active {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+div.menu .menuArchiveFlyout .menuArchiveEmpty {
+  padding: 8px 10px;
+  font-family: secondaryFont;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: #6c757d;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderItem {
+  list-style: none;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderToggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-family: secondaryFont;
+  font-size: inherit;
+  color: #373737;
+  text-align: left;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderToggle:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveChevron {
+  flex-shrink: 0;
+  display: grid;
+  place-content: center;
+  color: #495057;
+  transition: transform 0.15s ease;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveChevron.menuArchiveChevronOpen {
+  transform: rotate(180deg);
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileList {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 4px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFilePlaceholder {
+  padding: 6px 8px;
+  font-family: secondaryFont;
+  font-size: 0.82rem;
+  color: #868e96;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileListItem {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  list-style: none;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRow {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-family: secondaryFont;
+  font-size: 0.88rem;
+  color: #373737;
+  text-align: left;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowSave {
+  flex-shrink: 0;
+  align-self: stretch;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent-purple-soft);
+  font-family: secondaryFont;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4338ca;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowSave:hover {
+  background: rgba(73, 67, 243, 0.22);
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowDelete {
+  flex-shrink: 0;
+  width: 30px;
+  display: grid;
+  place-content: center;
+  align-self: stretch;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #868e96;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowDelete:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: #c92a2a;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowDelete svg {
+  width: 14px;
+  height: 14px;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRow:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowLogo {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-content: center;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #495057;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowLogo svg {
+  width: 15px;
+  height: 15px;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowName {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowTime {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #868e96;
 }
 
 .menuBlur {
@@ -963,7 +1329,8 @@ textarea.textBox {
 }
 
 .archiveBack,
-.archiveNewFolder {
+.archiveNewFolder,
+.archiveSaveCanvas {
   font-family: secondaryFont;
   font-size: 14px;
   padding: 0 16px;
@@ -1007,17 +1374,20 @@ textarea.textBox {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
 }
 
-.archiveNewFolder {
+.archiveNewFolder,
+.archiveSaveCanvas {
   background: var(--accent-purple-soft);
   color: #4338ca;
   font-weight: 500;
 }
 
-.archiveNewFolder:hover {
+.archiveNewFolder:hover,
+.archiveSaveCanvas:hover {
   background: rgba(73, 67, 243, 0.2);
 }
 
-.archiveNewFolder:active {
+.archiveNewFolder:active,
+.archiveSaveCanvas:active {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
 }
 
@@ -1196,8 +1566,9 @@ textarea.textBox {
 
 .archiveDiagramTile {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   padding: 10px 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 10px;
@@ -1205,7 +1576,24 @@ textarea.textBox {
   box-shadow: none;
 }
 
+.archiveDiagramTileLogo {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-content: center;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #495057;
+}
+
+.archiveDiagramTileLogo svg {
+  width: 18px;
+  height: 18px;
+}
+
 .archiveDiagramTileMain {
+  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1252,6 +1640,27 @@ textarea.textBox {
 }
 
 .archiveBtnOpen:active {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+.archiveBtnSave {
+  font-family: secondaryFont;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent-purple-soft);
+  color: #4338ca;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.archiveBtnSave:hover {
+  background: rgba(73, 67, 243, 0.22);
+}
+
+.archiveBtnSave:active {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
 }
 

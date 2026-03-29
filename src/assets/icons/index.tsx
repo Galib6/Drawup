@@ -323,6 +323,24 @@ export const MenuIcon = (): JSX.Element => (
   </svg>
 );
 
+/** Side panel / archive drawer toggle (rectangle with vertical split). */
+export const SidebarPanelIcon = (): JSX.Element => (
+  <svg
+    width="19"
+    height="19"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+    aria-hidden
+  >
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M15 4v16" />
+  </svg>
+);
+
 /** Nav / back control; sized to pair with ~14px UI labels. */
 export const ChevronLeft = (): JSX.Element => (
   <svg
@@ -337,6 +355,57 @@ export const ChevronLeft = (): JSX.Element => (
     aria-hidden
   >
     <path d="m15 18-6-6 6-6" />
+  </svg>
+);
+
+/** Collapse / expand; pair with `.menuArchiveChevronOpen` to rotate. */
+export const ChevronDown = (): JSX.Element => (
+  <svg
+    width="14"
+    height="14"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+    aria-hidden
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+/** Submenu / flyout affordance (opens panel to the side). */
+export const ChevronRight = (): JSX.Element => (
+  <svg
+    width="14"
+    height="14"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+    aria-hidden
+  >
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
+
+export const Plus = (): JSX.Element => (
+  <svg
+    height={demention}
+    width={demention}
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+    aria-hidden
+  >
+    <path d="M12 5v14" />
+    <path d="M5 12h14" />
   </svg>
 );
 

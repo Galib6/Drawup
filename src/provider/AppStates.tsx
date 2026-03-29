@@ -18,6 +18,7 @@ import { getElementById, minmax } from "../helper/element";
 import useHistory from "../hooks/useHistory";
 import {
   ActionType,
+  ActiveArchiveDiagram,
   AppContextType,
   DrawElement,
   ElementStyle,
@@ -89,9 +90,10 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
   const [scaleOffset, setScaleOffset] = useState<ScaleOffset>(defaultScaleOffset);
   const [lockTool, setLockTool] = useState<boolean>(defaultLockTool);
   const [style, setStyle] = useState<ElementStyle>(defaultStyle);
-  const [elements, setElements, undo, redo] = useHistory(initialElements, session);
+  const [elements, setElements, undo, redo, canUndo] = useHistory(initialElements, session);
 
   const [rerender, setRerender] = useState<boolean>(true);
+  const [activeArchiveDiagram, setActiveArchiveDiagram] = useState<ActiveArchiveDiagram | null>(null);
 
   useEffect(() => {
     try {
@@ -221,6 +223,7 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
     setSession(defaultSession);
     setSelectedElement(null);
     setSelectedIds([]);
+    setActiveArchiveDiagram(null);
   }
 
   return (
@@ -250,9 +253,12 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
         setSelectedIds,
         undo,
         redo,
+        canUndo,
         session,
         setSession,
         setToDefault,
+        activeArchiveDiagram,
+        setActiveArchiveDiagram,
         rerender,
         setRerender,
       }}

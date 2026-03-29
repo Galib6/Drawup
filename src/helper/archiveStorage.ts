@@ -69,3 +69,15 @@ export function removeDesign(folderId: string, designId: string): void {
   folder.designs = folder.designs.filter((d) => d.id !== designId);
   writeArchive(data);
 }
+
+/** Overwrite an archived diagram’s elements (e.g. canvas matches this archive entry). */
+export function updateDesign(folderId: string, designId: string, elements: DrawElement[]): boolean {
+  const data = readArchive();
+  const folder = data.folders.find((f) => f.id === folderId);
+  const design = folder?.designs.find((d) => d.id === designId);
+  if (!design) return false;
+  design.elements = JSON.parse(JSON.stringify(elements)) as DrawElement[];
+  design.updatedAt = Date.now();
+  writeArchive(data);
+  return true;
+}
