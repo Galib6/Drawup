@@ -4,7 +4,7 @@ export default function Zoom(): JSX.Element {
   const { scale, onZoom } = useAppContext();
 
   return (
-    <section className="zoomOptions">
+    <section className="sectionStyle zoomOptions">
       <button className="zoom out" onClick={() => onZoom(-0.1)}>
         -
       </button>

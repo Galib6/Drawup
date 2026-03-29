@@ -13,6 +13,29 @@ export const writing = (id: string | null): void => {
   textWriting = id;
 };
 
+/** Opaque paper + dots on the bitmap (matches prior look; avoids html/canvas grid misalignment seams). */
+export function drawWorkspaceBackground(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number
+): void {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  const step = 14;
+  ctx.fillStyle = "#f0f0f0";
+  const dotR = 1.4;
+  for (let x = 0; x <= width + step; x += step) {
+    for (let y = 0; y <= height + step; y += step) {
+      ctx.beginPath();
+      ctx.arc(x, y, dotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 interface ShapeParams {
   id?: string;
   x1: number;
@@ -179,7 +202,14 @@ export const shapes: Record<string, ShapeFunction> = {
     if (arrowType === 'elbowed') {
       const mids = midpoints && midpoints.length > 0 ? midpoints : [];
       const rf = roughness * Math.min(strokeWidth * 0.4, 3);
-      const elbowPts = elbowPolylinePoints(x1, y1, x2, y2, borderRadius, 18, 4, mids);
+      let elbowPts = elbowPolylinePoints(x1, y1, x2, y2, borderRadius, 18, 4, mids);
+      // Degenerate elbow (e.g. identical endpoints) can yield <2 polyline points; cartoon path then reads elbowPts[n-2].
+      if (elbowPts.length < 2) {
+        elbowPts = [
+          { x: x1, y: y1 },
+          { x: x2, y: y2 },
+        ];
+      }
       const verts = elbowCornerVertices(x1, y1, x2, y2, mids);
 
       if (roughness >= 2) {

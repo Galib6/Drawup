@@ -323,6 +323,23 @@ export const MenuIcon = (): JSX.Element => (
   </svg>
 );
 
+/** Nav / back control; sized to pair with ~14px UI labels. */
+export const ChevronLeft = (): JSX.Element => (
+  <svg
+    width="14"
+    height="14"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+    aria-hidden
+  >
+    <path d="m15 18-6-6 6-6" />
+  </svg>
+);
+
 export const Xmark = (): JSX.Element => (
   <svg
     width={21}
@@ -350,6 +367,37 @@ export const Folder = (): JSX.Element => (
     viewBox="0 0 24 24"
   >
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+  </svg>
+);
+
+export const ArchiveBox = (): JSX.Element => (
+  <svg
+    height={demention}
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <rect width="20" height="5" x="2" y="3" rx="1" />
+    <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+    <path d="M10 12h4" />
+  </svg>
+);
+
+export const UserCircle = (): JSX.Element => (
+  <svg
+    height={demention}
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20c1.5-4 5-6 8-6s6.5 2 8 6" />
   </svg>
 );
 

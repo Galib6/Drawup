@@ -1,6 +1,7 @@
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { ModalProvider } from "./provider/ModalContext";
 import { AppContextProvider } from "./provider/AppStates";
 import "./styles/index.css";
 
@@ -10,7 +11,9 @@ if (!rootElement) throw new Error("Failed to find the root element");
 ReactDOM.createRoot(rootElement).render(
   <BrowserRouter>
     <AppContextProvider>
-      <App />
+      <ModalProvider>
+        <App />
+      </ModalProvider>
     </AppContextProvider>
   </BrowserRouter>
 );

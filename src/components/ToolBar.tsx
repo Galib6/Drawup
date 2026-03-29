@@ -4,7 +4,7 @@ export default function ToolBar(): JSX.Element {
   const { tools: toolCols, selectedTool, lockTool } = useAppContext();
 
   return (
-    <section className="toolbar">
+    <section className="sectionStyle toolbar">
       {toolCols.map((tools, index) => (
         <div key={index}>
           {tools.map((tool, index_) => (

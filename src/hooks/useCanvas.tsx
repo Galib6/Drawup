@@ -3,6 +3,7 @@ import {
   cornerCursor,
   draw,
   drawFocuse,
+  drawWorkspaceBackground,
   excalifontReady,
   imageCache,
   inSelectedCorner,
@@ -62,6 +63,7 @@ export default function useCanvas(): UseCanvasReturn {
   } = useAppContext();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const workspaceBgBufferRef = useRef<HTMLCanvasElement | null>(null);
   const keys = useKeys();
   const dimension = useDimension();
   const [fontLoaded, setFontLoaded] = useState(false);
@@ -441,6 +443,17 @@ export default function useCanvas(): UseCanvasReturn {
     setScaleOffset({ x: scaleOffsetX, y: scaleOffsetY });
 
     context.clearRect(0, 0, canvas.width, canvas.height);
+
+    let bgBuf = workspaceBgBufferRef.current;
+    if (!bgBuf || bgBuf.width !== canvas.width || bgBuf.height !== canvas.height) {
+      bgBuf = document.createElement("canvas");
+      bgBuf.width = canvas.width;
+      bgBuf.height = canvas.height;
+      const bgCtx = bgBuf.getContext("2d");
+      if (bgCtx) drawWorkspaceBackground(bgCtx, bgBuf.width, bgBuf.height);
+      workspaceBgBufferRef.current = bgBuf;
+    }
+    context.drawImage(bgBuf, 0, 0);
 
     context.save();
 

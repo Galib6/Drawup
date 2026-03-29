@@ -4,7 +4,7 @@ import { useAppContext } from "../provider/AppStates";
 export default function UndoRedo(): JSX.Element {
   const { undo, redo } = useAppContext();
   return (
-    <section className="undoRedo">
+    <section className="sectionStyle undoRedo">
       <button type="button" onClick={undo}>
         <Undo />
       </button>
