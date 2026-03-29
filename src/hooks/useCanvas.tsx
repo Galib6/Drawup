@@ -23,11 +23,11 @@ import {
   getElementPosition,
   minmax,
   moveElement,
+  moveElementsByIds,
   resizeValue,
   saveElements,
   updateElement,
   uploadElements,
-  moveElementsByIds,
 } from "../helper/element";
 import {
   BoundingBox,
@@ -38,6 +38,7 @@ import {
   SelectedElement,
   UseCanvasReturn,
 } from "../types";
+import { useCloudSync } from "./useCloudSync";
 import useKeys from "./useKeys";
 import useTextArea from "./useTextArea";
 
@@ -97,6 +98,7 @@ export default function useCanvas(): UseCanvasReturn {
   } | null>(null);
 
   const createTextArea = useTextArea();
+  const { syncToCloud, canSync } = useCloudSync();
 
   useEffect(() => {
     excalifontReady.then(() => setFontLoaded(true));
@@ -680,7 +682,11 @@ export default function useCanvas(): UseCanvasReturn {
           undo();
         } else if (key.toLowerCase() === "s") {
           prevent();
-          saveElements(elements);
+          if (canSync) {
+            void syncToCloud();
+          } else {
+            saveElements(elements);
+          }
         } else if (key.toLowerCase() === "o") {
           prevent();
           uploadElements(
@@ -703,6 +709,8 @@ export default function useCanvas(): UseCanvasReturn {
     setElements,
     setSelectedElement,
     setSelectedIds,
+    syncToCloud,
+    canSync,
   ]);
 
   useEffect(() => {

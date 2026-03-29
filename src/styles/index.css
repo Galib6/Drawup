@@ -2110,3 +2110,109 @@ textarea.textBox {
 .Toastify__progress-bar--wrp {
   display: none !important;
 }
+
+/* Archive skeleton loader styles */
+.archiveFolderCardSkeleton {
+  opacity: 0.6;
+}
+
+.skeletonBox {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0%,
+    #e0e0e0 50%,
+    #f0f0f0 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonLoading 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes skeletonLoading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeletonTitle {
+  width: 150px;
+  height: 20px;
+}
+
+.skeletonButton {
+  width: 24px;
+  height: 24px;
+}
+
+.skeletonIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+.skeletonText {
+  width: 120px;
+  height: 16px;
+  margin-bottom: 4px;
+}
+
+.skeletonMeta {
+  width: 180px;
+  height: 12px;
+}
+
+.archiveDiagramTileSkeleton {
+  pointer-events: none;
+}
+
+/* Empty onboarding state */
+.archiveEmptyOnboarding {
+  text-align: center;
+  padding: 60px 40px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.archiveEmptyOnboarding h3 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  color: var(--primary-color);
+}
+
+.archiveEmptyOnboarding p {
+  font-size: 16px;
+  color: #6c757d;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.archiveEmptyActions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.archiveEmptyActions button {
+  font-family: secondaryFont;
+  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  border: 2px solid #6965db;
+  background: rgba(73, 67, 243, 0.12);
+  color: #4338ca;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.archiveEmptyActions button:hover:not(:disabled) {
+  background: rgba(73, 67, 243, 0.2);
+  transform: translateY(-1px);
+}
+
+.archiveEmptyActions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
