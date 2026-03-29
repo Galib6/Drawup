@@ -1,5 +1,7 @@
+import { Link } from "react-router-dom";
 import { getElementById } from "../helper/element";
 import { useAppContext } from "../provider/AppStates";
+import ArchiveSignInHint from "./ArchiveSignInHint";
 import Collaboration from "./Collaboration";
 import Credits from "./Credits";
 import Menu from "./Menu";
@@ -21,8 +23,16 @@ export default function Ui(): JSX.Element {
     <main className="ui">
       <header>
         <Menu />
-        <ToolBar />
-        <Collaboration />
+        <div className="headerCenterCluster">
+          <ToolBar />
+          <ArchiveSignInHint />
+        </div>
+        <div className="headerChromeRight">
+          <Collaboration />
+          <Link className="authHeaderSignIn" to="/sign-in">
+            Sign in
+          </Link>
+        </div>
       </header>
       {(!["selection", "hand"].includes(selectedTool) ||
         selectedIds.length > 0 ||

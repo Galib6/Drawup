@@ -11,12 +11,16 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.95.2",
+    "axios": "^1.14.0",
     "dotenv": "^16.4.5",
     "framer-motion": "^11.0.8",
+    "jwt-decode": "^4.0.0",
     "perfect-freehand": "^1.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.3",
+    "react-toastify": "^11",
     "socket.io-client": "^4.7.4",
     "socket.io-msgpack-parser": "^3.0.2",
     "uuid": "^9.0.1"
