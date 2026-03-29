@@ -6,7 +6,6 @@ import {
   Point,
   SelectedElement,
 } from "../types";
-import { distance } from "./canvas";
 
 const fileNameExtention = ".drawup";
 
@@ -61,8 +60,8 @@ export function isWithinElement(
         return Math.min(d1, d2, d3) < threshold;
       }
 
-      if (arrowType === 'curved' && tool === 'arrow' && !curvePoint && mids.length === 0) {
-        const cp = { x: (x1 + x2) / 2, y: Math.min(y1, y2) - Math.abs(x2 - x1) * 0.25 };
+      if (arrowType === 'curved' && tool === 'arrow') {
+        const cp = curvePoint || { x: (x1 + x2) / 2, y: Math.min(y1, y2) - Math.abs(x2 - x1) * 0.25 };
         const numSamples = 20;
         for (let i = 0; i <= numSamples; i++) {
           const t = i / numSamples;

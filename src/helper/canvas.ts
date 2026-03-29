@@ -702,7 +702,9 @@ export function getFocuseCorners(element: DrawElement, padding: number, position
 
   if (element.tool === "line" || element.tool === "arrow") {
     const isElbowed = element.tool === "arrow" && element.arrowType === "elbowed";
+    const isCurved = element.tool === "arrow" && element.arrowType === "curved";
     const midpoints = ('midpoints' in element && element.midpoints) ? element.midpoints : [];
+    let curvePoint = ('curvePoint' in element && element.curvePoint) ? element.curvePoint : null;
     const start = { x: fx, y: fy };
     const end = { x: fw, y: fh };
 
@@ -712,16 +714,33 @@ export function getFocuseCorners(element: DrawElement, padding: number, position
 
     if (isElbowed) {
       corners.push({ slug: "l2", x: end.x - position, y: end.y - position });
+    } else if (isCurved) {
+      // For curved arrows, generate default curve point if it doesn't exist
+      if (!curvePoint) {
+        curvePoint = { x: (fx + fw) / 2, y: Math.min(fy, fh) - Math.abs(fw - fx) * 0.25 };
+      }
+      corners.push({ slug: "l3", x: curvePoint.x - position, y: curvePoint.y - position });
+      corners.push({ slug: "l2", x: end.x - position, y: end.y - position });
     } else {
       const nodes = [start, ...midpoints, end];
-      for (let i = 0; i < midpoints.length; i++) {
-        corners.push({ slug: `lm-${i}` as CornerSlug, x: midpoints[i].x - position, y: midpoints[i].y - position });
+
+      // Check if there's a curvePoint but no midpoints (for lines/arrows with curve)
+      if (curvePoint && midpoints.length === 0) {
+        corners.push({ slug: "l3", x: curvePoint.x - position, y: curvePoint.y - position });
+      } else {
+        // Show midpoint handles
+        for (let i = 0; i < midpoints.length; i++) {
+          corners.push({ slug: `lm-${i}` as CornerSlug, x: midpoints[i].x - position, y: midpoints[i].y - position });
+        }
       }
+
+      // Add "add point" handles between segments
       for (let i = 0; i < nodes.length - 1; i++) {
         const mx = (nodes[i].x + nodes[i + 1].x) / 2;
         const my = (nodes[i].y + nodes[i + 1].y) / 2;
         corners.push({ slug: `la-${i}` as CornerSlug, x: mx - position, y: my - position });
       }
+
       corners.push({ slug: "l2", x: end.x - position, y: end.y - position });
     }
 
