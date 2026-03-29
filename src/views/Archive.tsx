@@ -89,31 +89,33 @@ export default function Archive(): JSX.Element {
   return (
     <div className="archivePage">
       <div className="archiveInner">
-        <header className="archiveTopBar">
-          <div className="archiveTopLeft">
-            <Link className="archiveBack" to="/">
-              <span className="archiveBackIcon" aria-hidden>
-                <ChevronLeft />
-              </span>
-              <span className="archiveBackLabel">Canvas</span>
-            </Link>
-            <div className="archiveTitleBlock">
-              <h1 className="archiveTitle">
-                <ArchiveBox /> Archive
-              </h1>
-              <p className="archiveHint">
-                Stored in this browser only (local storage). Save from the canvas menu:{" "}
-                <strong>Save to archive</strong> — pick folder and diagram name in the popup.
-              </p>
+        <div className="archiveChrome">
+          <header className="archiveTopBar">
+            <div className="archiveTopLeft">
+              <Link className="archiveBack" to="/">
+                <span className="archiveBackIcon" aria-hidden>
+                  <ChevronLeft />
+                </span>
+                <span className="archiveBackLabel">Canvas</span>
+              </Link>
+              <div className="archiveTitleBlock">
+                <h1 className="archiveTitle">
+                  <ArchiveBox /> Archive
+                </h1>
+                <p className="archiveHint">
+                  Stored in this browser only (local storage). Save from the canvas menu:{" "}
+                  <strong>Save to archive</strong> — pick folder and diagram name in the popup.
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="archiveTopActions">
-            <button className="archiveNewFolder" type="button" onClick={() => void handleNewFolder()}>
-              New folder
-            </button>
-            <ArchiveUserAvatar />
-          </div>
-        </header>
+            <div className="archiveTopActions">
+              <button className="archiveNewFolder" type="button" onClick={() => void handleNewFolder()}>
+                New folder
+              </button>
+              <ArchiveUserAvatar />
+            </div>
+          </header>
+        </div>
 
         <div className="archiveBoard">
           {data.folders.length === 0 ? (
