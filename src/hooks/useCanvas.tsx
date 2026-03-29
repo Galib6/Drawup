@@ -12,6 +12,8 @@ import { lockUI } from "../helper/ui";
 import { useAppContext } from "../provider/AppStates";
 import useDimension from "./useDimension";
 
+import { appToast } from "@/lib/appToast";
+import { useCloudSyncContext } from "@/provider/CloudSyncContext";
 import {
   adjustCoordinates,
   createElement,
@@ -25,7 +27,6 @@ import {
   moveElement,
   moveElementsByIds,
   resizeValue,
-  saveElements,
   updateElement,
   uploadElements,
 } from "../helper/element";
@@ -38,7 +39,6 @@ import {
   SelectedElement,
   UseCanvasReturn,
 } from "../types";
-import { useCloudSync } from "./useCloudSync";
 import useKeys from "./useKeys";
 import useTextArea from "./useTextArea";
 
@@ -98,7 +98,7 @@ export default function useCanvas(): UseCanvasReturn {
   } | null>(null);
 
   const createTextArea = useTextArea();
-  const { syncToCloud, canSync } = useCloudSync();
+  const { syncToCloud, canSync } = useCloudSyncContext();
 
   useEffect(() => {
     excalifontReady.then(() => setFontLoaded(true));
@@ -125,7 +125,20 @@ export default function useCanvas(): UseCanvasReturn {
     if (!element) return;
 
     if (element.tool === "text" && "text" in element) {
-      createTextArea(element, true);
+      createTextArea(
+        {
+          id: element.id,
+          x1: element.x1,
+          y1: element.y1,
+          x2: element.x2,
+          y2: element.y2,
+          text: element.text ?? "",
+          strokeColor: element.strokeColor,
+          fontSize: element.fontSize,
+          textAlign: element.textAlign,
+        },
+        true
+      );
       setSelectedElement(null);
       setSelectedIds([]);
       setRerender((state) => !state);
@@ -157,6 +170,7 @@ export default function useCanvas(): UseCanvasReturn {
   const handleMouseDown = (
     event: React.MouseEvent<HTMLCanvasElement>
   ): void => {
+    event.currentTarget.focus({ preventScroll: true });
     const { clientX, clientY } = mousePosition(event);
     lockUI(true);
 
@@ -449,7 +463,17 @@ export default function useCanvas(): UseCanvasReturn {
       );
 
       if (lastElement.tool === "text" && "text" in lastElement) {
-        createTextArea(lastElement);
+        createTextArea({
+          id: lastElement.id,
+          x1: lastElement.x1,
+          y1: lastElement.y1,
+          x2: lastElement.x2,
+          y2: lastElement.y2,
+          text: lastElement.text ?? "",
+          strokeColor: lastElement.strokeColor,
+          fontSize: lastElement.fontSize,
+          textAlign: lastElement.textAlign,
+        });
       }
 
       if (!lockTool && lastElement.tool !== "pencil") {
@@ -685,7 +709,9 @@ export default function useCanvas(): UseCanvasReturn {
           if (canSync) {
             void syncToCloud();
           } else {
-            saveElements(elements);
+            appToast.info(
+              "Open a diagram from Archive to sync with Ctrl+S, or use the Save button to save a new diagram to your archive."
+            );
           }
         } else if (key.toLowerCase() === "o") {
           prevent();

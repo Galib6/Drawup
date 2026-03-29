@@ -1,11 +1,10 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { queryClient } from "./@base/config";
 import App from "./App";
-import { appToastOptions } from "./lib/appToast";
+import { NotificationHost } from "./components/notifications/NotificationHost";
+import { CloudSyncProvider } from "./provider/CloudSyncContext";
 import { AppContextProvider } from "./provider/AppStates";
 import { ModalProvider } from "./provider/ModalContext";
 import "./styles/index.css";
@@ -18,8 +17,10 @@ ReactDOM.createRoot(rootElement).render(
     <BrowserRouter>
       <AppContextProvider>
         <ModalProvider>
-          <App />
-          <ToastContainer {...appToastOptions} limit={4} />
+          <CloudSyncProvider>
+            <App />
+            <NotificationHost />
+          </CloudSyncProvider>
         </ModalProvider>
       </AppContextProvider>
     </BrowserRouter>

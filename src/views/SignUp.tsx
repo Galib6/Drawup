@@ -3,7 +3,7 @@ import { useSignup } from "@components/auth/lib/hooks";
 import { setAuthSession } from "@components/auth/lib/utils";
 import { type ChangeEvent, type FormEvent, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { toast } from "react-toastify";
+import { appToast } from "@/lib/appToast";
 import AuthShell from "../components/auth/AuthShell";
 import GoogleAuthButton from "../components/auth/GoogleAuthButton";
 
@@ -25,7 +25,7 @@ export default function SignUp(): JSX.Element {
       onSuccess(data) {
         if (!data?.success) return;
         setAuthSession(data.data);
-        void toast
+        void appToast
           .promise(new Promise<void>((resolve) => setTimeout(resolve, 1000)), {
             pending: "Signing in...",
             success: "Sign up successful!",

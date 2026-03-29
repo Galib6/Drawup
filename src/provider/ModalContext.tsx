@@ -16,6 +16,8 @@ export type ModalFormField =
       type: "text";
       placeholder?: string;
       defaultValue?: string;
+      /** When true, empty value is allowed on submit. */
+      optional?: boolean;
     }
   | {
       id: string;
@@ -136,7 +138,7 @@ function ModalLayer({
     setFormError("");
     for (const f of active.fields) {
       const raw = (values[f.id] ?? "").trim();
-      if (f.type === "text" && !raw) {
+      if (f.type === "text" && !raw && !f.optional) {
         setFormError(`Please enter ${f.label.toLowerCase()}.`);
         return;
       }

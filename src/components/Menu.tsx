@@ -3,45 +3,33 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArchiveBox,
-  ChevronDown,
-  ChevronRight,
   Delete,
   Download,
   Folder,
   MenuIcon,
   Plus,
-  SidebarPanelIcon,
   Xmark,
 } from "../assets/icons";
-import {
-  formatDiagramTimestamp,
-  loadArchivedDiagramWithPrompts,
-} from "../helper/archiveLoadFlow";
 import { saveElements, uploadElements } from "../helper/element";
+import { persistCurrentCanvas } from "../helper/persistCurrentCanvas";
+import { canvasNeedsSavePrompt, saveNewDiagramThroughForm } from "../helper/saveNewToArchive";
+import { useGoToArchivePage } from "../hooks/useArchiveNavigation";
 import {
   useArchiveFolders,
   useCreateArchiveCanvas,
   useCreateArchiveFolder,
-  useDeleteArchiveCanvas,
   useUpdateArchiveCanvas,
 } from "../hooks/useArchiveService";
+import { appToast } from "../lib/appToast";
 import { useAppContext } from "../provider/AppStates";
+import { useCloudSyncContext } from "../provider/CloudSyncContext";
 import { useModal } from "../provider/ModalContext";
 import type { DrawElement } from "../types";
 
 export default function Menu(): JSX.Element {
   const [show, setShow] = useState(false);
-  const [archiveOpen, setArchiveOpen] = useState(false);
-  const { isAuthenticate: isLoggedIn } = useAuthSession();
-
-  const openArchiveFromMenu = (): void => {
-    setArchiveOpen(true);
-    setShow(false);
-  };
-
-  const toggleArchiveFromToolbar = (): void => {
-    setArchiveOpen((o) => !o);
-  };
+  const closeMenu = (): void => setShow(false);
+  const goToArchivePage = useGoToArchivePage();
 
   return (
     <div className="menu">
@@ -55,49 +43,54 @@ export default function Menu(): JSX.Element {
         >
           {show ? <Xmark /> : <MenuIcon />}
         </button>
-        {isLoggedIn ? (
-          <button
-            className={`menuBtn menuArchiveSidebarBtn ${archiveOpen ? "menuArchiveSidebarBtnActive" : ""}`}
-            type="button"
-            aria-label={archiveOpen ? "Close archive panel" : "Open archive"}
-            aria-expanded={archiveOpen}
-            onClick={toggleArchiveFromToolbar}
-          >
-            <SidebarPanelIcon />
-          </button>
-        ) : null}
+        <button
+          className="menuBtn menuArchiveSidebarBtn"
+          type="button"
+          aria-label="Open archive"
+          onClick={() => void goToArchivePage()}
+        >
+          <ArchiveBox />
+        </button>
       </div>
 
       {show && (
         <>
-          <div className="menuBlur" onClick={() => setShow(false)}></div>
+          <div className="menuBlur" onClick={closeMenu}></div>
           <div className="menuSurfaces">
             <MenuBox
-              close={() => setShow(false)}
-              archiveOpen={archiveOpen}
-              onOpenArchive={openArchiveFromMenu}
+              close={closeMenu}
+              goToArchivePage={() => goToArchivePage({ beforeNavigate: closeMenu })}
             />
           </div>
         </>
       )}
-
-      {archiveOpen && <ArchivePanel onClose={() => setArchiveOpen(false)} />}
     </div>
   );
 }
 
 interface MenuBoxProps {
   close: () => void;
-  archiveOpen: boolean;
-  onOpenArchive: () => void;
+  goToArchivePage: () => Promise<void>;
 }
 
-function MenuBox({ close, archiveOpen, onOpenArchive }: MenuBoxProps): JSX.Element {
-  const { elements, setElements, setToDefault, session } = useAppContext();
-  const modal = useModal();
+function MenuBox({ close, goToArchivePage }: MenuBoxProps): JSX.Element {
+  const navigate = useNavigate();
   const { isAuthenticate: isLoggedIn } = useAuthSession();
-  const { data: folders } = useArchiveFolders();
+  const {
+    elements,
+    setElements,
+    setToDefault,
+    session,
+    canUndo,
+    setActiveArchiveDiagram,
+    activeArchiveDiagram,
+  } = useAppContext();
+  const modal = useModal();
+  const { canSync, hasUnsavedChanges, syncToCloud, setSyncBaseline } = useCloudSyncContext();
+  const { refetch, refetchUnified } = useArchiveFolders();
   const createCanvas = useCreateArchiveCanvas();
+  const createFolder = useCreateArchiveFolder();
+  const updateCanvas = useUpdateArchiveCanvas();
 
   const uploadJson = (): void => {
     uploadElements(setElements as (action: DrawElement[]) => void);
@@ -107,44 +100,6 @@ function MenuBox({ close, archiveOpen, onOpenArchive }: MenuBoxProps): JSX.Eleme
   const downloadJson = (): void => {
     saveElements(elements);
     close();
-  };
-
-  const saveToArchive = async (): Promise<void> => {
-    close();
-    if (folders.length === 0) {
-      await modal.alert({
-        title: "No folders",
-        message: "Create a folder first: use the archive panel button or menu → Archive → Add folder.",
-      });
-      return;
-    }
-
-    const result = await modal.openForm({
-      title: "Save to archive",
-      fields: [
-        {
-          id: "folderId",
-          label: "Folder",
-          type: "select",
-          options: folders.map((f) => ({ value: f.id, label: f.name })),
-          defaultValue: folders[0]?.id,
-        },
-        {
-          id: "diagramName",
-          label: "Diagram name",
-          type: "text",
-          placeholder: "My diagram",
-          defaultValue: "My diagram",
-        },
-      ],
-      submitLabel: "Save",
-    });
-
-    if (!result) return;
-    const folderId = result.folderId?.trim();
-    const diagramName = result.diagramName?.trim();
-    if (!folderId || !diagramName) return;
-    createCanvas.mutate({ folderId, name: diagramName, elements });
   };
 
   const reset = async (): Promise<void> => {
@@ -159,301 +114,78 @@ function MenuBox({ close, archiveOpen, onOpenArchive }: MenuBoxProps): JSX.Eleme
     close();
   };
 
+  const startNewCanvas = async (): Promise<void> => {
+    close();
+    if (canvasNeedsSavePrompt(session, elements, canUndo, canSync, hasUnsavedChanges)) {
+      const saveFirst = await modal.confirm({
+        title: "Unsaved changes",
+        message: "Save your work before starting a new canvas? You can leave without saving.",
+        confirmLabel: "Save",
+        cancelLabel: "Leave without saving",
+      });
+      if (saveFirst) {
+        const result = await persistCurrentCanvas({
+          modal,
+          elements,
+          createFolderAsync: createFolder.mutateAsync,
+          createCanvasAsync: createCanvas.mutateAsync,
+          refetchUnified,
+          refetch,
+          activeArchiveDiagram,
+          hasUnsavedChanges,
+          isLoggedIn,
+          canSync,
+          syncToCloud,
+          setActiveArchiveDiagram,
+          setSyncBaseline,
+          updateCanvasAsync: updateCanvas.mutateAsync,
+        });
+        if (result === "cancelled") return;
+      }
+    }
+
+    const latest = await refetchUnified();
+    const info = await saveNewDiagramThroughForm({
+      modal,
+      folders: latest,
+      elements: [],
+      createFolderAsync: createFolder.mutateAsync,
+      createCanvasAsync: createCanvas.mutateAsync,
+      formTitle: "New canvas",
+      submitLabel: "Create",
+      diagramNameLabel: "Canvas name",
+      diagramNamePlaceholder: "Untitled",
+      diagramNameDefault: "Untitled",
+    });
+    if (!info) return;
+
+    setToDefault();
+    setActiveArchiveDiagram(info);
+    setSyncBaseline([]);
+    void refetch();
+    navigate("/", { replace: true });
+    appToast.success("New canvas ready");
+  };
+
   return (
     <section className="menuItems">
       <button className="menuItem" type="button" onClick={uploadJson}>
         <Folder /> <span>Open</span>
       </button>
+      <button className="menuItem" type="button" onClick={() => void startNewCanvas()}>
+        <Plus /> <span>New canvas</span>
+      </button>
       <button className="menuItem" type="button" onClick={downloadJson}>
         <Download /> <span>Save</span>
       </button>
-      {isLoggedIn ? (
-        <>
-          <button className="menuItem" type="button" onClick={() => void saveToArchive()}>
-            <ArchiveBox /> <span>Save to archive</span>
-          </button>
-          <button
-            className={`menuArchiveEntry ${archiveOpen ? "menuArchiveEntryActive" : ""}`}
-            type="button"
-            aria-expanded={archiveOpen}
-            aria-haspopup="dialog"
-            onClick={onOpenArchive}
-          >
-            <span className="menuArchiveEntryMain">
-              <ArchiveBox /> <span>Archive</span>
-            </span>
-            <span className="menuArchiveEntryChevron">
-              <ChevronRight />
-            </span>
-          </button>
-        </>
-      ) : null}
+      <button className="menuItem" type="button" onClick={() => void goToArchivePage()}>
+        <ArchiveBox /> <span>Archive</span>
+      </button>
       {!session && (
         <button className="menuItem" type="button" onClick={() => void reset()}>
           <Delete /> <span>Reset the canvas</span>
         </button>
       )}
-    </section>
-  );
-}
-
-interface ArchivePanelProps {
-  onClose: () => void;
-}
-
-function ArchivePanel({ onClose }: ArchivePanelProps): JSX.Element {
-  const { setElements, elements, canUndo, session, activeArchiveDiagram, setActiveArchiveDiagram } =
-    useAppContext();
-  const modal = useModal();
-  const navigate = useNavigate();
-  const [openFolderIds, setOpenFolderIds] = useState<Set<string>>(() => new Set());
-
-  // Use unified hooks
-  const { data: folders, isLoading, refetch } = useArchiveFolders();
-  const createFolder = useCreateArchiveFolder();
-  const createCanvas = useCreateArchiveCanvas();
-  const deleteCanvas = useDeleteArchiveCanvas();
-  const updateCanvas = useUpdateArchiveCanvas();
-
-  const handleSaveCurrentCanvas = async (): Promise<void> => {
-    if (folders.length === 0) {
-      await modal.alert({
-        title: "No folders",
-        message: "Create a folder first before saving your canvas.",
-      });
-      return;
-    }
-
-    const result = await modal.openForm({
-      title: "Save to archive",
-      fields: [
-        {
-          id: "folderId",
-          label: "Folder",
-          type: "select",
-          options: folders.map((f) => ({ value: f.id, label: f.name })),
-          defaultValue: folders[0]?.id,
-        },
-        {
-          id: "diagramName",
-          label: "Diagram name",
-          type: "text",
-          placeholder: "My diagram",
-          defaultValue: "My diagram",
-        },
-      ],
-      submitLabel: "Save",
-    });
-
-    if (!result) return;
-    const folderId = result.folderId?.trim();
-    const diagramName = result.diagramName?.trim();
-    if (!folderId || !diagramName) return;
-
-    createCanvas.mutate({ folderId, name: diagramName, elements });
-    refetch();
-  };
-
-  const handleNewFolder = async (): Promise<void> => {
-    const result = await modal.openForm({
-      title: "New folder",
-      fields: [
-        {
-          id: "name",
-          label: "Folder name",
-          type: "text",
-          placeholder: "My folder",
-          defaultValue: "My folder",
-        },
-      ],
-      submitLabel: "Create",
-    });
-    if (!result) return;
-    const name = result.name?.trim();
-    if (!name) return;
-    createFolder.mutate(name);
-    refetch();
-  };
-
-  const handleDeleteDiagram = async (folderId: string, designId: string): Promise<void> => {
-    const ok = await modal.confirm({
-      title: "Remove diagram",
-      message: "Remove this diagram from the archive?",
-      confirmLabel: "Remove",
-      cancelLabel: "Cancel",
-    });
-    if (!ok) return;
-    deleteCanvas.mutate({ folderId, canvasId: designId });
-    if (
-      activeArchiveDiagram?.folderId === folderId &&
-      activeArchiveDiagram?.designId === designId
-    ) {
-      setActiveArchiveDiagram(null);
-    }
-    refetch();
-  };
-
-  const handleUpdateArchivedDiagram = (folderId: string, designId: string, diagramName: string): void => {
-    updateCanvas.mutate({
-      folderId,
-      canvasId: designId,
-      name: diagramName,
-      elements
-    });
-    refetch();
-  };
-
-  const toggleFolderOpen = (folderId: string): void => {
-    setOpenFolderIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(folderId)) next.delete(folderId);
-      else next.add(folderId);
-      return next;
-    });
-  };
-
-  const handleOpenDiagram = async (folderId: string, designId: string): Promise<void> => {
-    const folder = folders.find((f) => f.id === folderId);
-    const diagram = folder?.designs.find((d) => d.id === designId);
-    if (!diagram) return;
-    await loadArchivedDiagramWithPrompts(
-      modal,
-      elements,
-      canUndo,
-      session,
-      folderId,
-      diagram,
-      setElements,
-      (info) => {
-        setActiveArchiveDiagram(info);
-        onClose();
-        navigate("/");
-      }
-    );
-    refetch();
-  };
-
-  return (
-    <section className="menuArchiveFlyout" role="dialog" aria-label="Archive">
-      <header className="menuArchiveFlyoutHead">
-        <span className="menuArchiveFlyoutTitle">
-          <ArchiveBox /> Archive
-        </span>
-        <button
-          className="menuArchiveFlyoutClose"
-          type="button"
-          aria-label="Close archive"
-          onClick={onClose}
-        >
-          <Xmark />
-        </button>
-      </header>
-      <div className="menuArchiveFlyoutBody">
-        <button
-          className="menuArchiveSaveCanvasRow"
-          type="button"
-          onClick={() => void handleSaveCurrentCanvas()}
-          disabled={createCanvas.isPending}
-        >
-          <ArchiveBox /> <span>{createCanvas.isPending ? "Saving..." : "Save current canvas"}</span>
-        </button>
-        <button
-          className="menuArchiveAddRow"
-          type="button"
-          onClick={() => void handleNewFolder()}
-          disabled={createFolder.isPending}
-        >
-          <Plus /> <span>{createFolder.isPending ? "Creating..." : "Add folder"}</span>
-        </button>
-        {isLoading ? (
-          <p className="menuArchiveEmpty">Loading...</p>
-        ) : folders.length === 0 ? (
-          <p className="menuArchiveEmpty">
-            No folders yet. Add a folder, then use Save current canvas or the menu → Save to archive.
-          </p>
-        ) : (
-          <ul className="menuArchiveFolderList">
-            {folders.map((folder) => {
-              const expanded = openFolderIds.has(folder.id);
-              return (
-                <li key={folder.id} className="menuArchiveFolderItem">
-                  <button
-                    className="menuArchiveFolderToggle"
-                    type="button"
-                    aria-expanded={expanded}
-                    onClick={() => toggleFolderOpen(folder.id)}
-                  >
-                    <Folder />
-                    <span className="menuArchiveFolderName">{folder.name}</span>
-                    <span className={`menuArchiveChevron ${expanded ? "menuArchiveChevronOpen" : ""}`}>
-                      <ChevronDown />
-                    </span>
-                  </button>
-                  {expanded && (
-                    <ul className="menuArchiveFileList">
-                      {folder.designs.length === 0 ? (
-                        <li className="menuArchiveFilePlaceholder">No diagrams yet</li>
-                      ) : (
-                        folder.designs.map((d) => {
-                          const isCanvasSameDiagram =
-                            activeArchiveDiagram?.folderId === folder.id &&
-                            activeArchiveDiagram?.designId === d.id;
-                          return (
-                            <li key={d.id} className="menuArchiveFileListItem">
-                              <button
-                                className="menuArchiveFileRow"
-                                type="button"
-                                onClick={() => void handleOpenDiagram(folder.id, d.id)}
-                              >
-                                <span className="menuArchiveFileRowLogo" aria-hidden>
-                                  <ArchiveBox />
-                                </span>
-                                <span className="menuArchiveFileRowInfo">
-                                  <span className="menuArchiveFileRowName">{d.name}</span>
-                                  <span className="menuArchiveFileRowTime">
-                                    {formatDiagramTimestamp(d.updatedAt)}
-                                  </span>
-                                </span>
-                              </button>
-                              {isCanvasSameDiagram ? (
-                                <button
-                                  className="menuArchiveFileRowSave"
-                                  type="button"
-                                  title="Update archive with current canvas"
-                                  disabled={updateCanvas.isPending}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleUpdateArchivedDiagram(folder.id, d.id, d.name);
-                                  }}
-                                >
-                                  {updateCanvas.isPending ? "..." : "Save"}
-                                </button>
-                              ) : null}
-                              <button
-                                className="menuArchiveFileRowDelete"
-                                type="button"
-                                title="Remove diagram"
-                                aria-label={`Remove ${d.name}`}
-                                disabled={deleteCanvas.isPending}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  void handleDeleteDiagram(folder.id, d.id);
-                                }}
-                              >
-                                <Delete />
-                              </button>
-                            </li>
-                          );
-                        })
-                      )}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
     </section>
   );
 }

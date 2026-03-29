@@ -42,6 +42,56 @@ export function removeFolder(folderId: string): void {
   writeArchive(data);
 }
 
+export function renameFolder(folderId: string, name: string): boolean {
+  const data = readArchive();
+  const folder = data.folders.find((f) => f.id === folderId);
+  if (!folder) return false;
+  folder.name = name.trim() || "Untitled folder";
+  writeArchive(data);
+  return true;
+}
+
+/** Move a design to another folder; keeps the same design id. */
+export function moveDesign(fromFolderId: string, designId: string, toFolderId: string): boolean {
+  if (fromFolderId === toFolderId) return true;
+  const data = readArchive();
+  const from = data.folders.find((f) => f.id === fromFolderId);
+  const to = data.folders.find((f) => f.id === toFolderId);
+  if (!from || !to) return false;
+  const idx = from.designs.findIndex((d) => d.id === designId);
+  if (idx === -1) return false;
+  const [design] = from.designs.splice(idx, 1);
+  design.updatedAt = Date.now();
+  to.designs.push(design);
+  writeArchive(data);
+  return true;
+}
+
+/** Update canvas name, elements, and optionally folder (local archive only). */
+export function applyLocalCanvasUpdate(params: {
+  sourceFolderId: string;
+  canvasId: string;
+  name: string;
+  elements: DrawElement[];
+  targetFolderId?: string;
+}): boolean {
+  const dest = params.targetFolderId ?? params.sourceFolderId;
+  let folderId = params.sourceFolderId;
+  if (dest !== params.sourceFolderId) {
+    if (!moveDesign(params.sourceFolderId, params.canvasId, dest)) return false;
+    folderId = dest;
+  }
+  const data = readArchive();
+  const folder = data.folders.find((f) => f.id === folderId);
+  const design = folder?.designs.find((d) => d.id === params.canvasId);
+  if (!design) return false;
+  design.name = params.name.trim() || "Untitled";
+  design.elements = JSON.parse(JSON.stringify(params.elements)) as DrawElement[];
+  design.updatedAt = Date.now();
+  writeArchive(data);
+  return true;
+}
+
 export function addDesign(
   folderId: string,
   name: string,

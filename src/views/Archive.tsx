@@ -1,13 +1,14 @@
 import { useAuthSession } from "@components/auth/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
-import { ArchiveBox, ChevronLeft, Delete } from "../assets/icons";
+import { ArchiveBox, ChevronLeft, Delete, Pencil, Project } from "../assets/icons";
 import { ArchiveLoadingSkeleton } from "../components/ArchiveSkeleton";
 import AuthHeaderAccount from "../components/AuthHeaderAccount";
 import {
   formatDiagramTimestamp,
   loadArchivedDiagramWithPrompts,
 } from "../helper/archiveLoadFlow";
-import type { UnifiedFolder } from "../hooks/useArchiveService";
+import { saveNewDiagramThroughForm } from "../helper/saveNewToArchive";
+import type { UnifiedDesign, UnifiedFolder } from "../hooks/useArchiveService";
 import {
   useArchiveFolders,
   useCreateArchiveCanvas,
@@ -15,16 +16,26 @@ import {
   useDeleteArchiveCanvas,
   useDeleteArchiveFolder,
   useUpdateArchiveCanvas,
+  useUpdateArchiveFolder,
 } from "../hooks/useArchiveService";
+import { appToast } from "../lib/appToast";
 import { useAppContext } from "../provider/AppStates";
+import { useCloudSyncContext } from "../provider/CloudSyncContext";
 import { useModal } from "../provider/ModalContext";
 
 export default function Archive(): JSX.Element {
   const navigate = useNavigate();
   const modal = useModal();
   const { isAuthenticate: isLoggedIn } = useAuthSession();
-  const { setElements, elements, canUndo, session, activeArchiveDiagram, setActiveArchiveDiagram } =
-    useAppContext();
+  const {
+    setElements,
+    elements,
+    canUndo,
+    session,
+    activeArchiveDiagram,
+    setActiveArchiveDiagram,
+  } = useAppContext();
+  const { canSync, hasUnsavedChanges, syncToCloud } = useCloudSyncContext();
 
   // Use unified hooks for data fetching and mutations
   const { data: folders, isLoading, refetch } = useArchiveFolders();
@@ -33,56 +44,37 @@ export default function Archive(): JSX.Element {
   const createCanvas = useCreateArchiveCanvas();
   const deleteCanvas = useDeleteArchiveCanvas();
   const updateCanvas = useUpdateArchiveCanvas();
+  const updateFolder = useUpdateArchiveFolder();
 
   const handleSaveCurrentCanvas = async (): Promise<void> => {
-    if (folders.length === 0) {
-      await modal.alert({
-        title: "No folders",
-        message: "Create a folder first, then try saving your canvas.",
-      });
+    if (canSync) {
+      await syncToCloud();
+      void refetch();
       return;
     }
-
-    const result = await modal.openForm({
-      title: "Save to archive",
-      fields: [
-        {
-          id: "folderId",
-          label: "Folder",
-          type: "select",
-          options: folders.map((f) => ({ value: f.id, label: f.name })),
-          defaultValue: folders[0]?.id,
-        },
-        {
-          id: "diagramName",
-          label: "Diagram name",
-          type: "text",
-          placeholder: "My diagram",
-          defaultValue: "My diagram",
-        },
-      ],
-      submitLabel: "Save",
+    const info = await saveNewDiagramThroughForm({
+      modal,
+      folders,
+      elements,
+      createFolderAsync: createFolder.mutateAsync,
+      createCanvasAsync: createCanvas.mutateAsync,
     });
-
-    if (!result) return;
-    const folderId = result.folderId?.trim();
-    const diagramName = result.diagramName?.trim();
-    if (!folderId || !diagramName) return;
-
-    createCanvas.mutate({ folderId, name: diagramName, elements });
+    if (!info) return;
+    setActiveArchiveDiagram(info);
+    appToast.success("Saved to archive");
     refetch();
   };
 
   const handleNewFolder = async (): Promise<void> => {
     const result = await modal.openForm({
-      title: "New folder",
+      title: "New project",
       fields: [
         {
           id: "name",
-          label: "Folder name",
+          label: "Project name",
           type: "text",
-          placeholder: "My folder",
-          defaultValue: "My folder",
+          placeholder: "My project",
+          defaultValue: "My project",
         },
       ],
       submitLabel: "Create",
@@ -94,13 +86,34 @@ export default function Archive(): JSX.Element {
     refetch();
   };
 
+  const handleRenameFolder = async (folder: UnifiedFolder): Promise<void> => {
+    const result = await modal.openForm({
+      title: "Rename project",
+      fields: [
+        {
+          id: "name",
+          label: "Project name",
+          type: "text",
+          placeholder: "Project name",
+          defaultValue: folder.name,
+        },
+      ],
+      submitLabel: "Save",
+    });
+    if (!result) return;
+    const name = result.name?.trim();
+    if (!name) return;
+    updateFolder.mutate({ folderId: folder.id, name });
+    refetch();
+  };
+
   const handleDeleteFolder = async (folder: UnifiedFolder): Promise<void> => {
     const message =
       folder.designs.length > 0
-        ? `Delete folder "${folder.name}" and its ${folder.designs.length} saved diagram(s)?`
-        : `Delete folder "${folder.name}"?`;
+        ? `Delete project "${folder.name}" and its ${folder.designs.length} saved diagram(s)?`
+        : `Delete project "${folder.name}"?`;
     const ok = await modal.confirm({
-      title: "Delete folder",
+      title: "Delete project",
       message,
       confirmLabel: "Delete",
       cancelLabel: "Cancel",
@@ -125,7 +138,8 @@ export default function Archive(): JSX.Element {
       (info) => {
         setActiveArchiveDiagram(info);
         navigate("/");
-      }
+      },
+      { canSync, hasCloudUnsaved: hasUnsavedChanges }
     );
     refetch();
   };
@@ -135,8 +149,52 @@ export default function Archive(): JSX.Element {
       folderId,
       canvasId: designId,
       name: diagramName,
-      elements
+      elements,
     });
+    refetch();
+  };
+
+  const handleEditCanvasMeta = async (folderId: string, diagram: UnifiedDesign): Promise<void> => {
+    const result = await modal.openForm({
+      title: "Edit canvas",
+      fields: [
+        {
+          id: "diagramName",
+          label: "Canvas name",
+          type: "text",
+          placeholder: "My diagram",
+          defaultValue: diagram.name,
+        },
+        {
+          id: "folderId",
+          label: "Project",
+          type: "select",
+          options: folders.map((f) => ({ value: f.id, label: f.name })),
+          defaultValue: folderId,
+        },
+      ],
+      submitLabel: "Save",
+    });
+    if (!result) return;
+    const name = result.diagramName?.trim();
+    const newFolderId = result.folderId?.trim();
+    if (!name || !newFolderId) return;
+
+    updateCanvas.mutate({
+      folderId,
+      canvasId: diagram.id,
+      name,
+      elements: diagram.elements,
+      targetFolderId: newFolderId !== folderId ? newFolderId : undefined,
+    });
+
+    if (activeArchiveDiagram?.designId === diagram.id) {
+      setActiveArchiveDiagram({
+        folderId: newFolderId,
+        designId: diagram.id,
+        name,
+      });
+    }
     refetch();
   };
 
@@ -158,37 +216,40 @@ export default function Archive(): JSX.Element {
     refetch();
   };
 
+  const archiveHint = isLoggedIn
+    ? "Projects and diagrams stay synced to the cloud. On the canvas, use Ctrl+S to save the open diagram."
+    : "Stored in this browser only. Save new work from here or from the menu on the canvas.";
+
   return (
     <div className="archivePage">
       <div className="archiveInner">
-        <div className="archiveChrome">
-          <header className="archiveTopBar">
-            <div className="archiveTopLeft">
+        <header className="archiveHeader">
+          <div className="archiveHeaderLeft">
+            <div className="archiveChromePill">
               <Link className="archiveBack" to="/">
                 <span className="archiveBackIcon" aria-hidden>
                   <ChevronLeft />
                 </span>
-                <span className="archiveBackLabel">Canvas</span>
+                <span className="archiveBackLabel">Back to canvas</span>
               </Link>
-              <div className="archiveTitleBlock">
-                <h1 className="archiveTitle">
-                  <ArchiveBox /> Archive
-                </h1>
-                <p className="archiveHint">
-                  {isLoggedIn
-                    ? "Your folders and canvases are synced to the cloud. Use Ctrl+S to save changes."
-                    : "Stored in this browser only (local storage). Use Save current canvas here or Save to archive in the menu."}
-                </p>
-              </div>
             </div>
-            <div className="archiveTopActions">
+          </div>
+          <div className="archiveHeaderCenter">
+            <div className="archiveChromePill archiveTitlePill">
+              <h1 className="archiveTitle">
+                <ArchiveBox /> Archive
+              </h1>
+            </div>
+          </div>
+          <div className="archiveHeaderRight">
+            <div className="archiveChromePill archiveChromePillActions">
               <button
                 className="archiveSaveCanvas"
                 type="button"
                 onClick={() => void handleSaveCurrentCanvas()}
                 disabled={createCanvas.isPending}
               >
-                {createCanvas.isPending ? "Saving..." : "Save current canvas"}
+                {createCanvas.isPending ? "Saving…" : "Save current canvas"}
               </button>
               <button
                 className="archiveNewFolder"
@@ -196,11 +257,20 @@ export default function Archive(): JSX.Element {
                 onClick={() => void handleNewFolder()}
                 disabled={createFolder.isPending}
               >
-                {createFolder.isPending ? "Creating..." : "New folder"}
+                <span className="archiveNewFolderInner" aria-hidden>
+                  <Project />
+                </span>
+                {createFolder.isPending ? "Creating…" : "New project"}
               </button>
               <AuthHeaderAccount />
             </div>
-          </header>
+          </div>
+        </header>
+
+        <div className="archiveHintWrap">
+          <div className="archiveHintBar canvasTopHintBar">
+            <p className="canvasTopHintText">{archiveHint}</p>
+          </div>
         </div>
 
         {isLoading ? (
@@ -209,9 +279,9 @@ export default function Archive(): JSX.Element {
           <div className="archiveBoard">
             {folders.length === 0 ? (
               isLoggedIn ? (
-                <div className="archiveBoardEmpty archiveEmptyOnboarding">
+                <div className="archiveEmptyOnboarding">
                   <h3>Welcome to your Archive</h3>
-                  <p>Looks like you don't have any folders yet. Let's create your first folder and canvas!</p>
+                  <p>Looks like you don't have any projects yet. Let's create your first project and canvas!</p>
                   <div className="archiveEmptyActions">
                     <button
                       className="archiveNewFolder"
@@ -219,13 +289,16 @@ export default function Archive(): JSX.Element {
                       onClick={() => void handleNewFolder()}
                       disabled={createFolder.isPending}
                     >
-                      {createFolder.isPending ? "Creating..." : "Create your first folder"}
+                      <span className="archiveNewFolderInner" aria-hidden>
+                        <Project />
+                      </span>
+                      {createFolder.isPending ? "Creating..." : "Create your first project"}
                     </button>
                   </div>
                 </div>
               ) : (
                 <p className="archiveBoardEmpty">
-                  No folders yet. Use <strong>New folder</strong>, then on the canvas use the menu →{" "}
+                  No projects yet. Use <strong>New project</strong>, then on the canvas use the menu →{" "}
                   <strong>Save to archive</strong>.
                 </p>
               )
@@ -234,15 +307,26 @@ export default function Archive(): JSX.Element {
                 <article key={folder.id} className="archiveFolderCard">
                   <div className="archiveFolderCardHead">
                     <h2 className="archiveFolderCardTitle">{folder.name}</h2>
-                    <button
-                      className="archiveFolderCardDelete"
-                      type="button"
-                      title="Delete folder"
-                      onClick={() => void handleDeleteFolder(folder)}
-                      disabled={deleteFolder.isPending}
-                    >
-                      <Delete />
-                    </button>
+                    <div className="archiveFolderCardHeadActions">
+                      <button
+                        className="archiveFolderCardIconBtn"
+                        type="button"
+                        title="Rename project"
+                        onClick={() => void handleRenameFolder(folder)}
+                        disabled={updateFolder.isPending}
+                      >
+                        <Pencil />
+                      </button>
+                      <button
+                        className="archiveFolderCardIconBtn archiveFolderCardIconBtnDanger"
+                        type="button"
+                        title="Delete project"
+                        onClick={() => void handleDeleteFolder(folder)}
+                        disabled={deleteFolder.isPending}
+                      >
+                        <Delete />
+                      </button>
+                    </div>
                   </div>
 
                   <ul className="archiveDiagramStack">
@@ -265,17 +349,32 @@ export default function Archive(): JSX.Element {
                               </span>
                             </div>
                             <div className="archiveDiagramTileActions">
-                              {isCanvasSameDiagram ? (
-                                <button
-                                  className="archiveBtnSave"
-                                  type="button"
-                                  title="Update archive with current canvas"
-                                  onClick={() => handleUpdateArchivedDiagram(folder.id, diagram.id, diagram.name)}
-                                  disabled={updateCanvas.isPending}
-                                >
-                                  {updateCanvas.isPending ? "Saving..." : "Save"}
-                                </button>
-                              ) : null}
+                              <button
+                                className="archiveBtnSave"
+                                type="button"
+                                title={
+                                  isCanvasSameDiagram
+                                    ? "Save the open canvas to this diagram in the cloud"
+                                    : "Open this diagram on the canvas first; then Save syncs your edits here"
+                                }
+                                onClick={() => {
+                                  if (!isCanvasSameDiagram) return;
+                                  handleUpdateArchivedDiagram(folder.id, diagram.id, diagram.name);
+                                }}
+                                disabled={!isCanvasSameDiagram || updateCanvas.isPending}
+                              >
+                                {updateCanvas.isPending && isCanvasSameDiagram ? "Saving…" : "Save"}
+                              </button>
+                              <button
+                                className="archiveBtnEdit"
+                                type="button"
+                                title="Rename or move to another folder"
+                                onClick={() => void handleEditCanvasMeta(folder.id, diagram)}
+                                disabled={updateCanvas.isPending}
+                              >
+                                <Pencil />
+                                <span className="archiveBtnEditLabel">Edit</span>
+                              </button>
                               <button
                                 className="archiveBtnOpen"
                                 type="button"

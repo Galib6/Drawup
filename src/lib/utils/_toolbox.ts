@@ -98,9 +98,9 @@ export const Toolbox = {
 
     const deleted = initialArr
       .filter((elem) => !currentMap.has(elem[key]))
-      .map((elem) => ({ ...elem, isDeleted: true }));
+      .map((elem) => ({ ...elem, isDeleted: true })) as (T & { isDeleted?: boolean })[];
 
-    return [...added, ...updated, ...deleted];
+    return [...added, ...updated, ...deleted] as (T & { isDeleted?: boolean })[];
   },
 
   pickProps: function <T extends Record<string, any>, K extends keyof T>(
@@ -239,7 +239,7 @@ export const Toolbox = {
     const csvRows = data.map((row) =>
       keys
         .map((key) => {
-          const val = row[key];
+          const val = (row as Record<string, unknown>)[key];
           return `"${(val ?? '').toString().replace(/"/g, '""')}"`;
         })
         .join(','),
@@ -410,11 +410,12 @@ export const Toolbox = {
     searchPropertyPath: string = '',
     searchKeyword: string = '',
   ): object[] {
+    type GroupAcc = Record<string, { name: string; values: object[] }>;
     return Object.values(
-      data.reduce((acc, current) => {
-        const propertyKey = Toolbox.toDeepProperty(current, propertyPath);
+      data.reduce((acc: GroupAcc, current) => {
+        const propertyKey = String(Toolbox.toDeepProperty(current, propertyPath));
         const searchPropertyKey =
-          searchPropertyPath && Toolbox.toDeepProperty(current, searchPropertyPath).toLowerCase();
+          searchPropertyPath && String(Toolbox.toDeepProperty(current, searchPropertyPath)).toLowerCase();
 
         if (!acc[propertyKey]) acc[propertyKey] = { name: propertyKey, values: [] };
 
@@ -425,7 +426,7 @@ export const Toolbox = {
         if (matchesProperty && matchesSearch) acc[propertyKey].values.push(current);
 
         return acc;
-      }, {}),
+      }, {} as GroupAcc),
     );
   },
 
@@ -593,8 +594,8 @@ export const Toolbox = {
     document.body.appendChild(iframe);
 
     iframe.onload = () => {
-      iframe.contentWindow.focus();
-      iframe.contentWindow.print();
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
     };
 
     if (type === 'pdf') iframe.src = content;
@@ -656,7 +657,7 @@ export const Toolbox = {
     URL.revokeObjectURL(link.href);
   },
 
-  getTimeSince(date) {
+  getTimeSince(date: string | number | Date | dayjs.Dayjs) {
     const now = dayjs();
     const created = dayjs(date);
 

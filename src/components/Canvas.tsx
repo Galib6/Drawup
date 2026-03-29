@@ -15,7 +15,7 @@ export default function Canvas(): JSX.Element {
     <canvas
       id="canvas"
       ref={canvasRef}
-      tabIndex={-1}
+      tabIndex={0}
       width={dimension.width}
       height={dimension.height}
       onMouseDown={handleMouseDown}

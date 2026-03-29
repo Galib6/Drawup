@@ -439,6 +439,24 @@ export const Folder = (): JSX.Element => (
   </svg>
 );
 
+/** Board / project (used for archive “projects” and add-project actions). */
+export const Project = (): JSX.Element => (
+  <svg
+    height={demention}
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+  >
+    <rect width="7" height="7" x="3" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="14" rx="1" />
+    <rect width="7" height="7" x="3" y="14" rx="1" />
+  </svg>
+);
+
 export const ArchiveBox = (): JSX.Element => (
   <svg
     height={demention}
@@ -483,6 +501,24 @@ export const Download = (): JSX.Element => (
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <path d="m7 10 5 5 5-5" />
     <path d="M12 15V3" />
+  </svg>
+);
+
+/** Save to archive / cloud (toolbar). */
+export const SaveIcon = (): JSX.Element => (
+  <svg
+    height={demention}
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    viewBox="0 0 24 24"
+    aria-hidden
+  >
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+    <path d="M17 21v-8H7v8" />
+    <path d="M7 3v5h8" />
   </svg>
 );
 

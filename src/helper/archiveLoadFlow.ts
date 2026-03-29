@@ -6,6 +6,30 @@ import { addDesign, readArchive } from "./archiveStorage";
 
 export type ArchiveLoadedInfo = ActiveArchiveDiagram;
 
+export type LoadArchivedDiagramOptions = {
+  /** Logged in with an archived diagram open on the canvas (Ctrl+S applies). */
+  canSync?: boolean;
+  /** True when current elements differ from last cloud save baseline. */
+  hasCloudUnsaved?: boolean;
+};
+
+function elementsEqual(a: DrawElement[], b: DrawElement[]): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** Whether replacing the canvas could lose work worth offering to save first. */
+export function shouldOfferSaveBeforeLoad(
+  session: string | null,
+  elements: DrawElement[],
+  canUndo: boolean,
+  options?: LoadArchivedDiagramOptions
+): boolean {
+  if (options?.canSync) {
+    return Boolean(options.hasCloudUnsaved);
+  }
+  return hasDirtyCanvas(session, elements, canUndo);
+}
+
 export function hasDirtyCanvas(
   session: string | null,
   elements: DrawElement[],
@@ -22,8 +46,8 @@ export async function saveCurrentDiagramToArchive(
   const data = readArchive();
   if (data.folders.length === 0) {
     await modal.alert({
-      title: "No folders",
-      message: "Create a folder in the archive first, then try again.",
+      title: "No projects",
+      message: "Create a project in the archive first, then try again.",
     });
     return false;
   }
@@ -33,7 +57,7 @@ export async function saveCurrentDiagramToArchive(
     fields: [
       {
         id: "folderId",
-        label: "Folder",
+        label: "Project",
         type: "select",
         options: data.folders.map((f) => ({ value: f.id, label: f.name })),
         defaultValue: data.folders[0]?.id,
@@ -69,8 +93,14 @@ export async function loadArchivedDiagramWithPrompts(
     overwrite?: boolean,
     emit?: boolean
   ) => void,
-  onLoaded?: (info: ArchiveLoadedInfo) => void
+  onLoaded?: (info: ArchiveLoadedInfo) => void,
+  options?: LoadArchivedDiagramOptions
 ): Promise<void> {
+  if (elementsEqual(elements, diagram.elements)) {
+    onLoaded?.({ folderId, designId: diagram.id, name: diagram.name });
+    return;
+  }
+
   const ok = await modal.confirm({
     title: "Load diagram",
     message: `Load "${diagram.name}" onto the canvas? The current canvas will be replaced.`,
@@ -79,7 +109,7 @@ export async function loadArchivedDiagramWithPrompts(
   });
   if (!ok) return;
 
-  if (hasDirtyCanvas(session, elements, canUndo)) {
+  if (shouldOfferSaveBeforeLoad(session, elements, canUndo, options)) {
     const saveFirst = await modal.confirm({
       title: "Unsaved changes",
       message: "Save your current design to the archive before loading?",
@@ -93,7 +123,7 @@ export async function loadArchivedDiagramWithPrompts(
   }
 
   setElements(JSON.parse(JSON.stringify(diagram.elements)) as DrawElement[], true);
-  onLoaded?.({ folderId, designId: diagram.id });
+  onLoaded?.({ folderId, designId: diagram.id, name: diagram.name });
 }
 
 export function formatDiagramTimestamp(ts: number): string {

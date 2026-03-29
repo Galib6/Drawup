@@ -55,13 +55,13 @@ export const clearAuthSession = (): boolean => {
   }
 };
 
-export const getAuthToken = (): string => {
+export const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') {
     return null;
   }
   try {
     const token = cookies.getData(authTokenKey);
-    return token;
+    return token ?? null;
   } catch (error) {
     console.error(error);
     return null;
@@ -129,11 +129,13 @@ export const useAuthSession = (): ISession => {
 };
 
 export function isJwtExpired(token: string): boolean {
-  const tokenData: ITokenData = token ? jwtDecode(token) : null;
-  if (!tokenData?.exp) return true;
-
-  const expDate: Date = new Date(tokenData?.exp * 1000);
-  if (expDate > new Date()) return false;
-
-  return true;
+  if (!token) return true;
+  try {
+    const tokenData = jwtDecode<ITokenData>(token);
+    if (!tokenData?.exp) return true;
+    const expDate = new Date(tokenData.exp * 1000);
+    return expDate <= new Date();
+  } catch {
+    return true;
+  }
 }

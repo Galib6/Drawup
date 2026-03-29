@@ -8,7 +8,8 @@ export interface IFolder extends IBaseEntity {
 
 export interface IFolderCreate {
   name: string;
-  canvases: ICanvas[];
+  /** Optional; omit when creating a project with no canvases yet. */
+  canvases?: ICanvas[];
 }
 
 export interface IFolderUpdate {

@@ -186,7 +186,7 @@ export interface CreateElementParams {
 }
 
 /** When set, the canvas was loaded from this archived diagram (enables “Save” on that row). */
-export type ActiveArchiveDiagram = { folderId: string; designId: string };
+export type ActiveArchiveDiagram = { folderId: string; designId: string; name?: string };
 
 // App context type
 export interface AppContextType {

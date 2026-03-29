@@ -59,6 +59,123 @@ body {
   outline: none;
 }
 
+/* In-app notifications (custom stack, bottom-right) */
+.appNotificationStack {
+  position: fixed;
+  z-index: 100000;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: min(420px, calc(100vw - 40px));
+  pointer-events: none;
+}
+
+.appNotification {
+  pointer-events: auto;
+  animation: appNotificationIn 0.22s ease-out;
+  box-shadow: var(--canvas-chrome-shadow);
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+  color: var(--primary-color);
+}
+
+@keyframes appNotificationIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.appNotificationInner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  min-height: 44px;
+}
+
+.appNotificationMessage {
+  flex: 1;
+  font-family: secondaryFont, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.appNotificationIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.appNotificationSpinner {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(105, 101, 219, 0.25);
+  border-top-color: var(--accent-purple);
+  border-radius: 50%;
+  animation: appNotificationSpin 0.7s linear infinite;
+}
+
+@keyframes appNotificationSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.appNotificationClose {
+  flex-shrink: 0;
+  margin: -4px -6px -4px 0;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: rgba(31, 31, 34, 0.45);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.appNotificationClose:hover {
+  color: var(--primary-color);
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.appNotification--success .appNotificationMessage {
+  color: #0d6b3a;
+}
+
+.appNotification--error .appNotificationMessage {
+  color: #c92a2a;
+}
+
+.appNotification--warning .appNotificationMessage {
+  color: #a15c07;
+}
+
+.appNotification--info .appNotificationMessage {
+  color: #1c4e7a;
+}
+
+.appNotification--loading .appNotificationMessage {
+  color: var(--primary-color);
+}
+
+/* Cloud sync notification icon */
+.cloudToastIcon {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
 body.lock-ui main.ui * {
   pointer-events: none;
 }
@@ -393,6 +510,12 @@ section.toolbar .toolbutton.lock[data-lock="true"] {
   color: var(--primary-color);
   background: rgba(15, 23, 42, 0.08);
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+section.toolbar .toolbutton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 section.zoomOptions {
@@ -750,13 +873,13 @@ div.menu .menuArchiveFlyout {
   left: 0;
   top: calc(100% + 10px);
   z-index: 1;
-  width: min(280px, calc(100vw - 48px));
+  width: min(340px, calc(100vw - 48px));
   background: #ffffff;
   border-radius: 12px;
   box-shadow: var(--canvas-chrome-shadow);
   display: flex;
   flex-direction: column;
-  max-height: min(420px, 70vh);
+  max-height: min(480px, 72vh);
 }
 
 div.menu .menuArchiveFlyoutHead {
@@ -827,32 +950,6 @@ div.menu .menuArchiveFlyout .menuArchiveAddRow:hover {
   background: rgba(15, 23, 42, 0.07);
 }
 
-div.menu .menuArchiveFlyout .menuArchiveSaveCanvasRow {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 8px 8px 10px;
-  margin-bottom: 6px;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent-purple-soft);
-  cursor: pointer;
-  font-family: secondaryFont;
-  font-size: inherit;
-  font-weight: 500;
-  color: #4338ca;
-  text-align: left;
-}
-
-div.menu .menuArchiveFlyout .menuArchiveSaveCanvasRow:hover {
-  background: rgba(73, 67, 243, 0.2);
-}
-
-div.menu .menuArchiveFlyout .menuArchiveSaveCanvasRow:active {
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
-}
-
 div.menu .menuArchiveFlyout .menuArchiveEmpty {
   padding: 8px 10px;
   font-family: secondaryFont;
@@ -874,8 +971,15 @@ div.menu .menuArchiveFlyout .menuArchiveFolderItem {
   list-style: none;
 }
 
+div.menu .menuArchiveFlyout .menuArchiveFolderRow {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+
 div.menu .menuArchiveFlyout .menuArchiveFolderToggle {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -892,6 +996,56 @@ div.menu .menuArchiveFlyout .menuArchiveFolderToggle {
 
 div.menu .menuArchiveFlyout .menuArchiveFolderToggle:hover {
   background: rgba(15, 23, 42, 0.05);
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderRenameBtn {
+  flex-shrink: 0;
+  width: 32px;
+  display: grid;
+  place-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #868e96;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderRenameBtn:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.06);
+  color: #4338ca;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderRenameBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderDeleteBtn {
+  flex-shrink: 0;
+  width: 32px;
+  display: grid;
+  place-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #868e96;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderDeleteBtn:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.06);
+  color: #c92a2a;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFolderDeleteBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 div.menu .menuArchiveFlyout .menuArchiveFolderName {
@@ -954,23 +1108,35 @@ div.menu .menuArchiveFlyout .menuArchiveFileRow {
   text-align: left;
 }
 
-div.menu .menuArchiveFlyout .menuArchiveFileRowSave {
+div.menu .menuArchiveFlyout .menuArchiveFileRowEdit {
   flex-shrink: 0;
+  width: 30px;
+  display: grid;
+  place-content: center;
   align-self: stretch;
-  padding: 0 8px;
   border: none;
   border-radius: 6px;
-  background: var(--accent-purple-soft);
-  font-family: secondaryFont;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #4338ca;
+  background: transparent;
+  color: #868e96;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
-div.menu .menuArchiveFlyout .menuArchiveFileRowSave:hover {
-  background: rgba(73, 67, 243, 0.22);
+div.menu .menuArchiveFlyout .menuArchiveFileRowEdit:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.06);
+  color: #4338ca;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowEdit svg {
+  width: 14px;
+  height: 14px;
+}
+
+div.menu .menuArchiveFlyout .menuArchiveFileRowEdit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 div.menu .menuArchiveFlyout .menuArchiveFileRowDelete {
@@ -1285,9 +1451,9 @@ textarea.textBox {
 
 .archiveInner {
   min-height: 100%;
-  padding: 20px 20px 48px;
+  padding: 20px clamp(16px, 3vw, 28px) 48px;
   width: 100%;
-  max-width: 1280px;
+  max-width: min(1200px, 100%);
   margin-left: auto;
   margin-right: auto;
   display: flex;
@@ -1296,36 +1462,72 @@ textarea.textBox {
   box-sizing: border-box;
 }
 
-.archiveChrome {
+/* Floating chrome — matches main.ui toolbar / Share pills (sectionStyle) */
+.archiveChromePill {
   pointer-events: all;
-  width: 100%;
-  margin-bottom: 20px;
-  padding: 14px 18px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px;
   border-radius: 12px;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.85);
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
   box-shadow: var(--canvas-chrome-shadow);
 }
 
-.archiveTopBar {
+.archiveTitlePill {
+  padding: 6px 16px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.archiveChromePillActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 5px 6px 5px 8px;
+}
+
+.archiveHeader {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  column-gap: 12px;
   width: 100%;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px 24px;
+  margin-bottom: 14px;
 }
 
-.archiveTopLeft {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 14px 18px;
-}
-
-.archiveTitleBlock {
+.archiveHeaderLeft {
+  justify-self: start;
   min-width: 0;
+}
+
+.archiveHeaderCenter {
+  justify-self: center;
+  grid-column: 2;
+  min-width: 0;
+}
+
+.archiveHeaderRight {
+  justify-self: end;
+  grid-column: 3;
+  min-width: 0;
+}
+
+.archiveHintWrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+.archiveHintBar {
+  width: fit-content;
+  max-width: min(100%, 44rem);
 }
 
 .archiveBack,
@@ -1333,7 +1535,7 @@ textarea.textBox {
 .archiveSaveCanvas {
   font-family: secondaryFont;
   font-size: 14px;
-  padding: 0 16px;
+  padding: 0 14px;
   height: 40px;
   border-radius: 10px;
   border: none;
@@ -1344,15 +1546,34 @@ textarea.textBox {
     color 0.12s ease;
 }
 
+.archiveNewFolder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.archiveNewFolderInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.archiveNewFolderInner svg {
+  display: block;
+}
+
 .archiveBack {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   line-height: 1.25;
   background: rgba(15, 23, 42, 0.06);
   color: var(--primary-color);
+  white-space: nowrap;
 }
 
 .archiveBackIcon {
@@ -1395,32 +1616,56 @@ textarea.textBox {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 1.25rem;
+  font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--primary-color);
   margin: 0;
+  line-height: 1.25;
+  text-wrap: balance;
 }
 
 .archiveTitle svg {
   flex-shrink: 0;
-  opacity: 0.85;
+  width: 20px;
+  height: 20px;
+  opacity: 0.9;
+  color: var(--accent-purple);
 }
 
-.archiveHint {
-  margin: 8px 0 0;
-  font-family: secondaryFont;
-  font-size: 13px;
-  line-height: 1.45;
-  color: #868e96;
-  max-width: 38rem;
+@media (max-width: 720px) {
+  .archiveHeader {
+    grid-template-columns: 1fr;
+    row-gap: 10px;
+  }
+
+  .archiveHeaderLeft,
+  .archiveHeaderCenter,
+  .archiveHeaderRight {
+    justify-self: stretch;
+    grid-column: 1;
+  }
+
+  .archiveChromePill,
+  .archiveChromePillActions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .archiveTitle {
+    justify-content: center;
+    width: 100%;
+  }
 }
 
-.archiveTopActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+@media (max-width: 520px) {
+  .archiveBackLabel {
+    display: none;
+  }
+
+  .archiveBack {
+    padding: 0 12px;
+  }
 }
 
 .archiveUserAvatar {
@@ -1456,25 +1701,26 @@ textarea.textBox {
 }
 
 .archiveBoard {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 16px;
   width: 100%;
-  align-items: start;
 }
 
 .archiveBoardEmpty {
-  grid-column: 1 / -1;
-  justify-self: center;
+  align-self: center;
+  width: fit-content;
+  max-width: min(100%, 28rem);
   font-family: secondaryFont;
-  font-size: 15px;
+  font-size: 13px;
   color: #868e96;
-  max-width: 28rem;
   text-align: center;
   line-height: 1.55;
-  padding: 28px 32px;
+  padding: 12px 20px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(12px);
   box-shadow: var(--canvas-chrome-shadow);
 }
@@ -1482,43 +1728,48 @@ textarea.textBox {
 .archiveFolderCard {
   display: flex;
   flex-direction: column;
-  min-height: 200px;
-  padding: 14px 14px 16px;
+  min-height: 0;
+  padding: 16px 18px 18px;
   border-radius: 12px;
-  border: none;
+  border: 1px solid rgba(15, 23, 42, 0.08);
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
   box-shadow: var(--canvas-chrome-shadow);
 }
 
 .archiveFolderCardHead {
-  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.archiveFolderCardHeadActions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  margin-bottom: 12px;
-  padding: 0 36px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .archiveFolderCardTitle {
   margin: 0;
   font-family: secondaryFont;
-  font-size: 15px;
+  font-size: 1.05rem;
   font-weight: 600;
-  color: var(--primary-color);
-  text-align: center;
-  line-height: 1.3;
+  color: #343a40;
+  text-align: left;
+  line-height: 1.35;
   word-break: break-word;
-  flex: 1;
-  letter-spacing: -0.01em;
+  min-width: 0;
+  flex: 1 1 auto;
+  letter-spacing: -0.02em;
 }
 
-.archiveFolderCardDelete {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+.archiveFolderCardIconBtn {
   display: grid;
   place-content: center;
   width: 32px;
@@ -1533,13 +1784,22 @@ textarea.textBox {
     color 0.12s ease;
 }
 
-.archiveFolderCardDelete:hover {
+.archiveFolderCardIconBtn:hover:not(:disabled) {
   background: rgba(15, 23, 42, 0.06);
+  color: #4338ca;
+}
+
+.archiveFolderCardIconBtnDanger:hover:not(:disabled) {
   color: #c92a2a;
 }
 
-.archiveFolderCardDelete:active {
+.archiveFolderCardIconBtn:active:not(:disabled) {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+.archiveFolderCardIconBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .archiveDiagramStack {
@@ -1558,33 +1818,34 @@ textarea.textBox {
   font-size: 13px;
   color: #adb5bd;
   text-align: center;
-  padding: 22px 10px;
-  border: 1px dashed rgba(15, 23, 42, 0.12);
+  padding: 20px 12px;
+  border: 1px dashed rgba(15, 23, 42, 0.1);
   border-radius: 10px;
-  background: rgba(15, 23, 42, 0.03);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .archiveDiagramTile {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 10px;
-  background: #f8f9fa;
-  box-shadow: none;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  flex-wrap: wrap;
 }
 
 .archiveDiagramTileLogo {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-content: center;
   border-radius: 8px;
-  background: rgba(15, 23, 42, 0.06);
-  color: #495057;
+  background: var(--accent-purple-soft);
+  color: #4338ca;
 }
 
 .archiveDiagramTileLogo svg {
@@ -1593,7 +1854,7 @@ textarea.textBox {
 }
 
 .archiveDiagramTileMain {
-  flex: 1;
+  flex: 1 1 0%;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1602,24 +1863,80 @@ textarea.textBox {
 
 .archiveDiagramTileName {
   font-family: secondaryFont;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--primary-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  color: #212529;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .archiveDiagramTileMeta {
   font-family: secondaryFont;
-  font-size: 11px;
+  font-size: 12px;
   color: #868e96;
+  line-height: 1.4;
 }
 
 .archiveDiagramTileActions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+@media (max-width: 540px) {
+  .archiveDiagramTileActions {
+    width: 100%;
+    justify-content: flex-start;
+    padding-top: 4px;
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+    margin-top: 4px;
+  }
+}
+
+.archiveBtnEdit {
+  font-family: secondaryFont;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #fff;
+  color: #495057;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.archiveBtnEdit:hover:not(:disabled) {
+  background: rgba(73, 67, 243, 0.08);
+  border-color: rgba(73, 67, 243, 0.25);
+  color: #4338ca;
+}
+
+.archiveBtnEdit:active:not(:disabled) {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+.archiveBtnEdit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.archiveBtnEdit svg {
+  flex-shrink: 0;
+}
+
+.archiveBtnEditLabel {
+  line-height: 1;
 }
 
 .archiveBtnOpen {
@@ -1647,21 +1964,32 @@ textarea.textBox {
   font-family: secondaryFont;
   font-size: 13px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: none;
+  padding: 7px 14px;
+  border-radius: 9px;
+  border: 1px solid transparent;
   background: var(--accent-purple-soft);
   color: #4338ca;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    opacity 0.12s ease,
+    border-color 0.12s ease;
 }
 
-.archiveBtnSave:hover {
+.archiveBtnSave:hover:not(:disabled) {
   background: rgba(73, 67, 243, 0.22);
 }
 
-.archiveBtnSave:active {
+.archiveBtnSave:active:not(:disabled) {
   box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
+
+.archiveBtnSave:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  background: rgba(15, 23, 42, 0.06);
+  color: #868e96;
+  border-color: rgba(15, 23, 42, 0.06);
 }
 
 .archiveTileDelete {
@@ -2105,12 +2433,6 @@ textarea.textBox {
   background: #ffe3e3;
 }
 
-/* react-toastify: hide progress bar strip everywhere */
-.Toastify__progress-bar,
-.Toastify__progress-bar--wrp {
-  display: none !important;
-}
-
 /* Archive skeleton loader styles */
 .archiveFolderCardSkeleton {
   opacity: 0.6;
@@ -2168,51 +2490,87 @@ textarea.textBox {
   pointer-events: none;
 }
 
-/* Empty onboarding state */
+/* Empty onboarding state — same floating card language as canvas hints */
 .archiveEmptyOnboarding {
+  align-self: center;
   text-align: center;
-  padding: 60px 40px;
-  max-width: 600px;
+  padding: 28px 28px 32px;
+  max-width: min(100%, 440px);
+  width: 100%;
   margin: 0 auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--canvas-chrome-shadow);
 }
 
 .archiveEmptyOnboarding h3 {
-  font-size: 24px;
-  margin-bottom: 12px;
+  font-family: secondaryFont;
+  font-size: clamp(1.05rem, 2.5vw, 1.2rem);
+  font-weight: 600;
+  margin-bottom: 10px;
   color: var(--primary-color);
+  letter-spacing: -0.02em;
 }
 
 .archiveEmptyOnboarding p {
-  font-size: 16px;
-  color: #6c757d;
-  margin-bottom: 24px;
-  line-height: 1.5;
+  font-family: secondaryFont;
+  font-size: 13px;
+  color: #868e96;
+  margin-bottom: 20px;
+  line-height: 1.55;
 }
 
 .archiveEmptyActions {
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .archiveEmptyActions button {
   font-family: secondaryFont;
-  font-size: 16px;
-  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 18px;
+  height: 40px;
   border-radius: 10px;
-  border: 2px solid #6965db;
-  background: rgba(73, 67, 243, 0.12);
+  border: none;
+  background: var(--accent-purple-soft);
   color: #4338ca;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.12s ease;
 }
 
 .archiveEmptyActions button:hover:not(:disabled) {
   background: rgba(73, 67, 243, 0.2);
-  transform: translateY(-1px);
 }
 
 .archiveEmptyActions button:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Cloud load / save overlay (WorkSpace) */
+.canvasCloudOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: all;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.canvasCloudOverlayInner {
+  font-family: secondaryFont;
+  font-size: 15px;
+  color: var(--primary-color);
+  padding: 14px 22px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--canvas-chrome-shadow);
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }

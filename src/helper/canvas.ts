@@ -572,9 +572,9 @@ export const shapes: Record<string, ShapeFunction> = {
       const rf = roughness * Math.min(strokeWidth * 0.3, 2);
       ctx.beginPath();
       drawWobblySegment(ctx, left, top, right, top, random, rf, 0, true);
-      drawWobblySegment(ctx, right, top, right, bottom, random, rf, 10, true);
-      drawWobblySegment(ctx, right, bottom, left, bottom, random, rf, 20, true);
-      drawWobblySegment(ctx, left, bottom, left, top, random, rf, 30, true);
+      drawWobblySegment(ctx, right, top, right, bottom, random, rf, 10, false);
+      drawWobblySegment(ctx, right, bottom, left, bottom, random, rf, 20, false);
+      drawWobblySegment(ctx, left, bottom, left, top, random, rf, 30, false);
       ctx.closePath();
     } else {
       ctx.beginPath();

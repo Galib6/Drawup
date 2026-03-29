@@ -111,7 +111,7 @@ export interface ISession {
     id: IdType;
     email: string;
     name?: string;
-  };
-  expires: Date;
-  token: string;
+  } | null;
+  expires: Date | null;
+  token: string | null;
 }

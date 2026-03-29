@@ -1,32 +1,77 @@
-import { toast, type ToastPromiseParams, type ToastOptions } from "react-toastify";
+import type { ReactNode } from "react";
+import {
+  patchNotification,
+  pushNotification,
+} from "@/lib/notifications/store";
 
-/** Single set of options for every programmatic toast (matches ToastContainer defaults). */
-export const appToastOptions: ToastOptions = {
-  position: "top-center",
-  hideProgressBar: true,
-  autoClose: 5000,
-  closeOnClick: true,
-  pauseOnHover: true,
+/** Default time before a notification is removed (ms). */
+export const APP_TOAST_DURATION_MS = 3000;
+
+export type AppToastPromiseMessages = {
+  pending: string;
+  success: string;
+  error: string;
+  pendingIcon?: ReactNode;
+  successIcon?: ReactNode;
 };
 
 export const appToast = {
   error(message: string): void {
-    toast.error(message, appToastOptions);
+    pushNotification({
+      variant: "error",
+      message,
+      durationMs: APP_TOAST_DURATION_MS,
+    });
   },
 
   success(message: string): void {
-    toast.success(message, appToastOptions);
+    pushNotification({
+      variant: "success",
+      message,
+      durationMs: APP_TOAST_DURATION_MS,
+    });
   },
 
   info(message: string): void {
-    toast.info(message, appToastOptions);
+    pushNotification({
+      variant: "info",
+      message,
+      durationMs: APP_TOAST_DURATION_MS,
+    });
   },
 
   warning(message: string): void {
-    toast.warning(message, appToastOptions);
+    pushNotification({
+      variant: "warning",
+      message,
+      durationMs: APP_TOAST_DURATION_MS,
+    });
   },
 
-  promise<T>(promise: Promise<T>, messages: ToastPromiseParams<T>): Promise<T> {
-    return toast.promise(promise, messages as ToastPromiseParams, appToastOptions);
+  promise<T>(promise: Promise<T>, messages: AppToastPromiseMessages): Promise<T> {
+    const id = pushNotification({
+      variant: "loading",
+      message: messages.pending,
+      durationMs: 0,
+      icon: messages.pendingIcon,
+    });
+    return promise
+      .then((value) => {
+        patchNotification(id, {
+          variant: "success",
+          message: messages.success,
+          durationMs: APP_TOAST_DURATION_MS,
+          icon: messages.successIcon,
+        });
+        return value;
+      })
+      .catch((err: unknown) => {
+        patchNotification(id, {
+          variant: "error",
+          message: messages.error,
+          durationMs: APP_TOAST_DURATION_MS,
+        });
+        throw err;
+      });
   },
 };

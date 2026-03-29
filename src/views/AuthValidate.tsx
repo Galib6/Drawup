@@ -4,7 +4,7 @@ import { useValidate } from "@components/auth/lib/hooks";
 import { setAuthSession } from "@components/auth/lib/utils";
 import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { toast } from "react-toastify";
+import { appToast } from "@/lib/appToast";
 
 /**
  * OAuth callback: `provider` + `callbackUrl` (optionally `...?token=...` in the value),
@@ -30,7 +30,7 @@ export default function AuthValidate(): JSX.Element {
       onSuccess(data) {
         if (data?.success) {
           setAuthSession(data.data);
-          void toast
+          void appToast
             .promise(new Promise<void>((resolve) => setTimeout(resolve, 1000)), {
               pending: "Logging in...",
               success: "Login successful!",
@@ -41,7 +41,7 @@ export default function AuthValidate(): JSX.Element {
             });
           return;
         }
-        toast.error(data?.message ?? "Validation failed", { autoClose: 1000 });
+        appToast.error(data?.message ?? "Validation failed");
       },
       onError() {
         navigate(`${Paths.auth.login}?callbackUrl=${encodeURIComponent(window.location.href)}`, {

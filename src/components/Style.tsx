@@ -439,7 +439,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
                             if (!styleTargetIds.includes(el.id)) return el;
                             if (el.tool !== "text" || !("text" in el)) return el;
                             const bounds = measureTextBounds(
-                              el.text,
+                              el.text ?? "",
                               size,
                               el.x1,
                               el.y1

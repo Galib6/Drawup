@@ -64,7 +64,7 @@ const isElementsInLocal = (): DrawElement[] => {
     const stored = localStorage.getItem("elements");
     if (!stored) return defaultElements;
     const parsed = JSON.parse(stored) as DrawElement[];
-    parsed.forEach(() => {}); // validate it's an array
+    parsed.forEach(() => { }); // validate it's an array
     return parsed;
   } catch {
     return defaultElements;
@@ -72,6 +72,22 @@ const isElementsInLocal = (): DrawElement[] => {
 };
 
 const initialElements = isElementsInLocal();
+
+const ACTIVE_ARCHIVE_STORAGE_KEY = "drawup-active-archive";
+
+function readStoredActiveArchive(): ActiveArchiveDiagram | null {
+  try {
+    const raw = sessionStorage.getItem(ACTIVE_ARCHIVE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ActiveArchiveDiagram;
+    if (parsed && typeof parsed.folderId === "string" && typeof parsed.designId === "string") {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 interface AppContextProviderProps {
   children: ReactNode;
@@ -93,7 +109,17 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
   const [elements, setElements, undo, redo, canUndo] = useHistory(initialElements, session);
 
   const [rerender, setRerender] = useState<boolean>(true);
-  const [activeArchiveDiagram, setActiveArchiveDiagram] = useState<ActiveArchiveDiagram | null>(null);
+  const [activeArchiveDiagram, setActiveArchiveDiagram] = useState<ActiveArchiveDiagram | null>(
+    readStoredActiveArchive
+  );
+
+  useEffect(() => {
+    if (activeArchiveDiagram) {
+      sessionStorage.setItem(ACTIVE_ARCHIVE_STORAGE_KEY, JSON.stringify(activeArchiveDiagram));
+    } else {
+      sessionStorage.removeItem(ACTIVE_ARCHIVE_STORAGE_KEY);
+    }
+  }, [activeArchiveDiagram]);
 
   useEffect(() => {
     try {

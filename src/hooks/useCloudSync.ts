@@ -1,86 +1,76 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, createElement } from "react";
+import { CloudToastIcon } from "@/components/CloudToastIcon";
 import { useAuthSession } from "@components/auth/lib/utils";
 import { useAppContext } from "@/provider/AppStates";
-import { useModal } from "@/provider/ModalContext";
+import { appToast } from "@/lib/appToast";
 import { useUpdateArchiveCanvas, hasCanvasChanged } from "./useArchiveService";
 import type { DrawElement } from "@/types";
 
-export function useCloudSync() {
+export type CloudSyncApi = {
+  syncToCloud: () => Promise<boolean>;
+  canSync: boolean;
+  hasUnsavedChanges: boolean;
+  /** Call when server canvas is applied so “saved” baseline matches cloud. */
+  setSyncBaseline: (next: DrawElement[]) => void;
+};
+
+export function useCloudSync(): CloudSyncApi {
   const { isAuthenticate: isLoggedIn } = useAuthSession();
   const { elements, activeArchiveDiagram } = useAppContext();
-  const modal = useModal();
   const updateCanvas = useUpdateArchiveCanvas();
-  const [isSyncing, setIsSyncing] = useState(false);
   const lastSyncedElementsRef = useRef<DrawElement[]>([]);
 
-  // Track the last synced state
   useEffect(() => {
     if (activeArchiveDiagram) {
-      // Initialize with current elements when a diagram is loaded
-      lastSyncedElementsRef.current = JSON.parse(JSON.stringify(elements));
+      lastSyncedElementsRef.current = JSON.parse(JSON.stringify(elements)) as DrawElement[];
     }
   }, [activeArchiveDiagram?.designId]);
 
+  const setSyncBaseline = useCallback((next: DrawElement[]) => {
+    lastSyncedElementsRef.current = JSON.parse(JSON.stringify(next)) as DrawElement[];
+  }, []);
+
   const syncToCloud = async (): Promise<boolean> => {
-    // Only sync if user is logged in and has an active archive diagram
     if (!isLoggedIn || !activeArchiveDiagram) {
       return false;
     }
 
     const { folderId, designId, name } = activeArchiveDiagram;
 
-    // Check if canvas has changed
     if (!hasCanvasChanged(lastSyncedElementsRef.current, elements)) {
-      await modal.alert({
-        title: "No changes",
-        message: "Canvas hasn't been modified since last save."
-      });
+      appToast.info("No changes to save.");
       return false;
     }
 
-    // Show syncing toast
-    setIsSyncing(true);
-
-    return new Promise((resolve) => {
-      updateCanvas.mutate(
+    try {
+      await appToast.promise(
+        (async () => {
+          await updateCanvas.mutateAsync({
+            folderId,
+            canvasId: designId,
+            name: name ?? "Untitled",
+            elements,
+          });
+          lastSyncedElementsRef.current = JSON.parse(JSON.stringify(elements)) as DrawElement[];
+        })(),
         {
-          folderId,
-          canvasId: designId,
-          name: name || "Untitled",
-          elements
+          pending: "Saving…",
+          success: "Saved to cloud",
+          error: "Save failed. Try again.",
+          pendingIcon: createElement(CloudToastIcon),
+          successIcon: createElement(CloudToastIcon),
         }
       );
-
-      // Wait for mutation to complete
-      const checkComplete = setInterval(() => {
-        if (!updateCanvas.isPending) {
-          clearInterval(checkComplete);
-          setIsSyncing(false);
-
-          if (updateCanvas.isSuccess) {
-            // Update the last synced state
-            lastSyncedElementsRef.current = JSON.parse(JSON.stringify(elements));
-            modal.alert({
-              title: "Synced to cloud",
-              message: "Your canvas has been successfully saved to the cloud."
-            });
-            resolve(true);
-          } else if (updateCanvas.isError) {
-            modal.alert({
-              title: "Sync failed",
-              message: "Failed to sync your canvas to the cloud. Please try again."
-            });
-            resolve(false);
-          }
-        }
-      }, 100);
-    });
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   return {
     syncToCloud,
-    isSyncing,
     canSync: isLoggedIn && !!activeArchiveDiagram,
-    hasUnsavedChanges: hasCanvasChanged(lastSyncedElementsRef.current, elements)
+    hasUnsavedChanges: hasCanvasChanged(lastSyncedElementsRef.current, elements),
+    setSyncBaseline,
   };
 }
