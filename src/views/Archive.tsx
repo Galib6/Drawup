@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArchiveBox, ChevronLeft, Delete } from "../assets/icons";
-import ArchiveUserAvatar from "../components/ArchiveUserAvatar";
+import AuthHeaderAccount from "../components/AuthHeaderAccount";
 import { addFolder, readArchive, removeDesign, removeFolder } from "../helper/archiveStorage";
 import { useAppContext } from "../provider/AppStates";
 import { useModal } from "../provider/ModalContext";
@@ -112,7 +112,7 @@ export default function Archive(): JSX.Element {
               <button className="archiveNewFolder" type="button" onClick={() => void handleNewFolder()}>
                 New folder
               </button>
-              <ArchiveUserAvatar />
+              <AuthHeaderAccount />
             </div>
           </header>
         </div>

@@ -25,7 +25,6 @@ export const PublicPaths = [
   Paths.auth.signup,
   Paths.auth.validate,
   Paths.auth.resetPass,
-  Paths.archive,
 ];
 
 /** Normalizes pathname for comparisons (trailing slash, except root). */

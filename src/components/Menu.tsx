@@ -1,3 +1,5 @@
+import { Paths } from "@base/constants/paths";
+import { useAuthSession } from "@components/auth/lib/utils";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArchiveBox, Delete, Download, Folder, MenuIcon, Xmark } from "../assets/icons";
@@ -34,6 +36,7 @@ interface MenuBoxProps {
 function MenuBox({ close }: MenuBoxProps): JSX.Element {
   const { elements, setElements, setToDefault, session } = useAppContext();
   const modal = useModal();
+  const { isAuthenticate: isLoggedIn } = useAuthSession();
 
   const uploadJson = (): void => {
     uploadElements(setElements as (action: DrawElement[]) => void);
@@ -106,12 +109,16 @@ function MenuBox({ close }: MenuBoxProps): JSX.Element {
         <button className="menuItem" type="button" onClick={downloadJson}>
           <Download /> <span>Save</span>
         </button>
-        <button className="menuItem" type="button" onClick={() => void saveToArchive()}>
-          <ArchiveBox /> <span>Save to archive</span>
-        </button>
-        <Link className="menuItem" to="/archive" onClick={close}>
-          <Folder /> <span>Archive</span>
-        </Link>
+        {isLoggedIn ? (
+          <>
+            <button className="menuItem" type="button" onClick={() => void saveToArchive()}>
+              <ArchiveBox /> <span>Save to archive</span>
+            </button>
+            <Link className="menuItem" to={Paths.archive} onClick={close}>
+              <Folder /> <span>Archive</span>
+            </Link>
+          </>
+        ) : null}
         {!session && (
           <button className="menuItem" type="button" onClick={() => void reset()}>
             <Delete /> <span>Reset the canvas</span>

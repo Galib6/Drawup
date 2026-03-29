@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { authTokenKey } from './constant';
 import { ILoginSession, ISession, ITokenData } from './interfaces';
 
+/** Fired after `setAuthSession` / `clearAuthSession` so UI can re-sync. */
+export const AUTH_SESSION_CHANGED_EVENT = 'drawup-auth-session-changed';
+
 const unAuthorizedSession: ISession = {
   isLoading: false,
   isAuthenticate: false,
@@ -21,6 +24,10 @@ export const setAuthSession = (session: ILoginSession): ISession => {
 
     const tokenData: ITokenData = jwtDecode(session.token);
     cookies.setData(authTokenKey, session.token, new Date(tokenData.exp * 1000));
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(AUTH_SESSION_CHANGED_EVENT));
+    }
 
     return {
       isLoading: false,
@@ -110,7 +117,12 @@ export const useAuthSession = (): ISession => {
   const [session, setSession] = useState<ISession>({ ...unAuthorizedSession, isLoading: true });
 
   useEffect(() => {
-    setSession(getAuthSession());
+    const sync = (): void => {
+      setSession(getAuthSession());
+    };
+    sync();
+    window.addEventListener(AUTH_SESSION_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(AUTH_SESSION_CHANGED_EVENT, sync);
   }, []);
 
   return session;
