@@ -1,5 +1,6 @@
-import { useAuthSession } from "@components/auth/lib/utils";
+import { getAuthSession, useAuthSession } from "@components/auth/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { Paths } from "@base/constants/paths";
 import { persistCurrentCanvas } from "@/helper/persistCurrentCanvas";
 import { canvasNeedsSavePrompt } from "@/helper/saveNewToArchive";
 import {
@@ -18,7 +19,9 @@ export type GoToArchiveOptions = {
 };
 
 /**
- * Navigate to /archive, with the same unsaved prompt and Save branch as toolbar Save (Ctrl+S).
+ * Navigate to /archive. Logged-in users with a dirty canvas get the same unsaved prompt as Save (Ctrl+S).
+ * Guests skip that prompt (they cannot archive-save); navigating to /archive lets AuthGate send them to
+ * sign-in with callbackUrl pointing back at the archive.
  */
 export function useGoToArchivePage(): (opts?: GoToArchiveOptions) => Promise<void> {
   const navigate = useNavigate();
@@ -36,7 +39,12 @@ export function useGoToArchivePage(): (opts?: GoToArchiveOptions) => Promise<voi
     opts?.beforeNavigate?.();
 
     if (!canvasNeedsSavePrompt(session, elements, canUndo, canSync, hasUnsavedChanges)) {
-      navigate("/archive");
+      navigate(Paths.archive);
+      return;
+    }
+
+    if (!getAuthSession().isAuthenticate) {
+      navigate(Paths.archive);
       return;
     }
 
@@ -65,6 +73,6 @@ export function useGoToArchivePage(): (opts?: GoToArchiveOptions) => Promise<voi
       });
       if (result === "cancelled") return;
     }
-    navigate("/archive");
+    navigate(Paths.archive);
   };
 }

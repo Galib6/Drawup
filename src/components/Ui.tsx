@@ -10,6 +10,9 @@ import ToolBar from "./ToolBar";
 import UndoRedo from "./UndoRedo";
 import Zoom from "./Zoom";
 
+/** Set to true to show live collaboration (Share) in the header. */
+const SHOW_SHARE_BUTTON = false;
+
 export default function Ui(): JSX.Element {
   const { selectedElement, selectedTool, style, selectedIds, elements } =
     useAppContext();
@@ -28,7 +31,7 @@ export default function Ui(): JSX.Element {
           <ArchiveSignInHint />
         </div>
         <div className="headerChromeRight">
-          <Collaboration />
+          {SHOW_SHARE_BUTTON ? <Collaboration /> : null}
           <AuthHeaderAccount />
         </div>
       </header>

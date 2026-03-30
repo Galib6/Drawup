@@ -4,10 +4,33 @@ import { elbowBendRadius, elbowCornerVertices, elbowPolylinePoints } from "./ele
 export const imageCache = new Map<string, HTMLImageElement>();
 let textWriting: string | null = null;
 
+const EXCALIFONT_METRIC = "30px Excalifont";
+
+/**
+ * Resolves when Excalifont is registered and usable on canvas / textarea.
+ * Waits for `document.fonts.ready`, loads the face explicitly, and retries one frame if needed
+ * (avoids drawing with a fallback when CSS registration lags module init).
+ */
 export const excalifontReady: Promise<void> =
-  typeof document !== 'undefined'
-    ? document.fonts.load("30px Excalifont").then(() => {}).catch(() => {})
-    : Promise.resolve();
+  typeof document === "undefined"
+    ? Promise.resolve()
+    : (async (): Promise<void> => {
+        try {
+          await document.fonts.ready;
+          await document.fonts.load(EXCALIFONT_METRIC);
+          if (!document.fonts.check(EXCALIFONT_METRIC)) {
+            await new Promise<void>((r) => requestAnimationFrame(() => r()));
+            await document.fonts.load(EXCALIFONT_METRIC);
+          }
+        } catch {
+          try {
+            await document.fonts.ready;
+            await document.fonts.load(EXCALIFONT_METRIC);
+          } catch {
+            /* still paint with cursive fallback */
+          }
+        }
+      })();
 
 export const writing = (id: string | null): void => {
   textWriting = id;
