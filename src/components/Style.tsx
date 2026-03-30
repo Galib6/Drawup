@@ -123,28 +123,11 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
 
   const showRectRadius =
     styleTargetIds.length === 0
-      ? selectedTool === "rectangle" ||
-        selectedTool === "diamond" ||
-        (selectedTool === "arrow" && elementStyle.arrowType === "elbowed")
+      ? selectedTool === "rectangle" || selectedTool === "diamond"
       : styleTargetIds.every((id) => {
           const e = getElementById(id, elements);
-          return (
-            e?.tool === "rectangle" ||
-            e?.tool === "diamond" ||
-            (e?.tool === "arrow" && e.arrowType === "elbowed")
-          );
+          return e?.tool === "rectangle" || e?.tool === "diamond";
         });
-
-  const edgesLabel =
-    styleTargetIds.length === 0
-      ? selectedTool === "arrow" && elementStyle.arrowType === "elbowed"
-        ? "Bend radius"
-        : "Edges"
-      : styleTargetIds.every(
-          (id) => getElementById(id, elements)?.tool === "arrow"
-        )
-        ? "Bend radius"
-        : "Edges";
 
   return (
     <section className="styleOptions">
@@ -179,7 +162,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
           ))}
         </div>
       </div>
-      {!isText && (
+      {!isText && !showArrowStyle && (
         <div className="group backgroundColor">
           <p>Background</p>
           <div className="innerGroup">
@@ -579,15 +562,11 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
       )}
       {showRectRadius && (
         <div className="group edges">
-          <p>{edgesLabel}</p>
+          <p>Edges</p>
           <div className="innerGroup">
             <button
               type="button"
-              title={
-                edgesLabel === "Bend radius"
-                  ? "Auto bend (follows arrow size, max 40px)"
-                  : "Sharp edges"
-              }
+              title="Sharp edges"
               className={
                 "itemButton option" +
                 ((elementStyle.borderRadius ?? 0) === 0 ? " selected" : "")
@@ -613,11 +592,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             </button>
             <button
               type="button"
-              title={
-                edgesLabel === "Bend radius"
-                  ? "Set explicit bend radius (slider)"
-                  : "Rounded edges"
-              }
+              title="Rounded edges"
               className={
                 "itemButton option" +
                 ((elementStyle.borderRadius ?? 0) > 0 ? " selected" : "")

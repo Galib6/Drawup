@@ -1047,6 +1047,8 @@ export function drawFocuse(
   const square = 10 / scale;
   let round = square;
   const position = square / 2;
+  // Open paths (line/arrow): stroke handles only — no filled handle "background".
+  const hideHandleFill = element.tool === "arrow" || element.tool === "line";
 
   const demention = getFocuseCorners(element, padding, position);
   const { fx, fy, fw, fh } = demention.line;
@@ -1072,7 +1074,7 @@ export function drawFocuse(
   normalCorners.forEach((corner) => {
     context.roundRect(corner.x, corner.y, square, square, round);
   });
-  context.fill();
+  if (!hideHandleFill) context.fill();
   context.stroke();
   context.closePath();
 
@@ -1087,7 +1089,7 @@ export function drawFocuse(
     addCorners.forEach((corner) => {
       context.roundRect(corner.x + offset, corner.y + offset, smallSquare, smallSquare, smallSquare);
     });
-    context.fill();
+    if (!hideHandleFill) context.fill();
     context.stroke();
     context.closePath();
     context.restore();
@@ -1100,7 +1102,14 @@ export function draw(element: DrawElement, context: CanvasRenderingContext2D): v
   context.beginPath();
   context.lineWidth = strokeWidth;
   context.strokeStyle = strokeColor;
-  context.fillStyle = tool === "text" ? strokeColor : fill;
+  // Arrow/line are stroke-only; never use the shape fill color (avoids bogus fills).
+  if (tool === "text") {
+    context.fillStyle = strokeColor;
+  } else if (tool === "arrow" || tool === "line") {
+    context.fillStyle = "rgba(0,0,0,0)";
+  } else {
+    context.fillStyle = fill;
+  }
   context.globalAlpha = opacity * 0.01;
 
   if (strokeStyle === "dashed") context.setLineDash([strokeWidth * 2, strokeWidth * 2]);
@@ -1129,10 +1138,14 @@ export function draw(element: DrawElement, context: CanvasRenderingContext2D): v
   const isCartoonist = element.roughness >= 2 &&
     (tool === 'rectangle' || tool === 'diamond' || tool === 'circle' || tool === 'arrow' || tool === 'line');
 
+  // Arrow/line are open paths: filling would close the path implicitly and paint a bogus
+  // region (between the stroke and the chord from start to end). Stroke only.
+  const strokeOnlyTool = tool === "arrow" || tool === "line";
+
   shapes[tool](shapeParams, context);
 
   if (!isCartoonist) {
-    context.fill();
+    if (!strokeOnlyTool) context.fill();
     if (strokeWidth > 0) context.stroke();
   }
 
