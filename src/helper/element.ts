@@ -441,8 +441,14 @@ export function duplicateElement(
   setState: (action: (prev: DrawElement[]) => DrawElement[]) => void,
   setSelected: React.Dispatch<React.SetStateAction<SelectedElement | null>>,
   factor: number,
-  offsets: { offsetX?: number; offsetY?: number } = {},
-  setSelectedIds?: React.Dispatch<React.SetStateAction<string[]>>
+  offsets: {
+    offsetX?: number;
+    offsetY?: number;
+    lastPosX?: number;
+    lastPosY?: number;
+  } = {},
+  setSelectedIds?: React.Dispatch<React.SetStateAction<string[]>>,
+  onDuplicate?: (duplicated: DrawElement) => void
 ): void {
   if (!s_element) return;
 
@@ -454,6 +460,7 @@ export function duplicateElement(
           const duplicated = { ...moveElement(element, factor), id: uuid() };
           setSelected({ ...duplicated, ...offsets });
           setSelectedIds?.([duplicated.id]);
+          onDuplicate?.(duplicated);
           return [element, duplicated];
         }
         return element;

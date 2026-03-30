@@ -4,28 +4,42 @@ import { elbowBendRadius, elbowCornerVertices, elbowPolylinePoints } from "./ele
 export const imageCache = new Map<string, HTMLImageElement>();
 let textWriting: string | null = null;
 
-const EXCALIFONT_METRIC = "30px Excalifont";
+/** Matches `ctx.font` / textarea (size + family list, same as CSS canvas uses). */
+function excalifontMetric(px: number): string {
+  return `${px}px Excalifont, cursive`;
+}
+
+const EXCALIFONT_METRICS = Array.from(
+  new Set(Object.values(FONT_SIZE_MAP))
+).map((px) => excalifontMetric(px));
 
 /**
  * Resolves when Excalifont is registered and usable on canvas / textarea.
- * Waits for `document.fonts.ready`, loads the face explicitly, and retries one frame if needed
+ * Waits for `document.fonts.ready`, loads each size used on the canvas, and retries one frame if needed
  * (avoids drawing with a fallback when CSS registration lags module init).
  */
 export const excalifontReady: Promise<void> =
   typeof document === "undefined"
     ? Promise.resolve()
     : (async (): Promise<void> => {
-        try {
+        const ensureLoaded = async (): Promise<void> => {
           await document.fonts.ready;
-          await document.fonts.load(EXCALIFONT_METRIC);
-          if (!document.fonts.check(EXCALIFONT_METRIC)) {
-            await new Promise<void>((r) => requestAnimationFrame(() => r()));
-            await document.fonts.load(EXCALIFONT_METRIC);
+          for (const m of EXCALIFONT_METRICS) {
+            await document.fonts.load(m);
           }
+          const checkMetric = EXCALIFONT_METRICS[1] ?? EXCALIFONT_METRICS[0];
+          if (checkMetric && !document.fonts.check(checkMetric)) {
+            await new Promise<void>((r) => requestAnimationFrame(() => r()));
+            for (const m of EXCALIFONT_METRICS) {
+              await document.fonts.load(m);
+            }
+          }
+        };
+        try {
+          await ensureLoaded();
         } catch {
           try {
-            await document.fonts.ready;
-            await document.fonts.load(EXCALIFONT_METRIC);
+            await ensureLoaded();
           } catch {
             /* still paint with cursive fallback */
           }
@@ -99,6 +113,58 @@ function perp(x1: number, y1: number, x2: number, y2: number) {
   const dy = y2 - y1;
   const len = Math.hypot(dx, dy) || 1;
   return { px: -dy / len, py: dx / len };
+}
+
+/** Effective corner radius and tangent points for a rounded diamond (vertices T, R, B, L). */
+function diamondRoundedGeometry(
+  pts: Point[],
+  borderRadius: number
+): { r: number; pin: Point[]; pout: Point[] } {
+  const n = 4;
+  if (borderRadius <= 0) {
+    return { r: 0, pin: [], pout: [] };
+  }
+
+  let rEff = borderRadius;
+  for (let i = 0; i < n; i++) {
+    const V = pts[i];
+    const Prev = pts[(i + 3) % n];
+    const Next = pts[(i + 1) % n];
+    const eIn = { x: V.x - Prev.x, y: V.y - Prev.y };
+    const eOut = { x: Next.x - V.x, y: Next.y - V.y };
+    const lenIn = Math.hypot(eIn.x, eIn.y);
+    const lenOut = Math.hypot(eOut.x, eOut.y);
+    if (lenIn < 1e-6 || lenOut < 1e-6) {
+      return { r: 0, pin: [], pout: [] };
+    }
+    const uIn = { x: eIn.x / lenIn, y: eIn.y / lenIn };
+    const uOut = { x: eOut.x / lenOut, y: eOut.y / lenOut };
+    const c = Math.max(-1, Math.min(1, -(uIn.x * uOut.x + uIn.y * uOut.y)));
+    const theta = Math.acos(c);
+    const tanHalf = Math.tan(theta / 2) || 1e-6;
+    const maxR = tanHalf * Math.min(lenIn, lenOut) * 0.45;
+    rEff = Math.min(rEff, maxR);
+  }
+
+  const pin: Point[] = [];
+  const pout: Point[] = [];
+  for (let i = 0; i < n; i++) {
+    const V = pts[i];
+    const Prev = pts[(i + 3) % n];
+    const Next = pts[(i + 1) % n];
+    const eIn = { x: V.x - Prev.x, y: V.y - Prev.y };
+    const eOut = { x: Next.x - V.x, y: Next.y - V.y };
+    const lenIn = Math.hypot(eIn.x, eIn.y) || 1;
+    const lenOut = Math.hypot(eOut.x, eOut.y) || 1;
+    const uIn = { x: eIn.x / lenIn, y: eIn.y / lenIn };
+    const uOut = { x: eOut.x / lenOut, y: eOut.y / lenOut };
+    const c = Math.max(-1, Math.min(1, -(uIn.x * uOut.x + uIn.y * uOut.y)));
+    const theta = Math.acos(c);
+    const t = rEff / Math.tan(theta / 2);
+    pin.push({ x: V.x - uIn.x * t, y: V.y - uIn.y * t });
+    pout.push({ x: V.x + uOut.x * t, y: V.y + uOut.y * t });
+  }
+  return { r: rEff, pin, pout };
 }
 
 function drawWobblySegment(
@@ -203,7 +269,10 @@ const CARTOON_PASSES = 3;
 
 export const shapes: Record<string, ShapeFunction> = {
   arrow: ({ x1, y1, x2, y2, curvePoint, midpoints, strokeWidth = 3, roughness = 1, arrowType = 'sharp', arrowheads = 'end', borderRadius = 0 }, ctx) => {
-    const headlen = Math.max(10, strokeWidth * 3);
+    const dist = Math.hypot(x2 - x1, y2 - y1);
+    // Scale arrowhead with both stroke thickness and arrow length, so long arrows don't look
+    // like they have a tiny tip.
+    const headlen = Math.min(60, Math.max(10, strokeWidth * 3, dist * 0.05));
     const random = seededRandom(coordSeed(x1, y1, x2, y2));
     const { px, py } = perp(x1, y1, x2, y2);
 
@@ -211,8 +280,11 @@ export const shapes: Record<string, ShapeFunction> = {
     ctx.lineJoin = "round";
 
     const drawHead = (tipX: number, tipY: number, angle: number, rf: number, seedBase: number) => {
-      const h1 = (random(seedBase) - 0.5) * rf * 0.5;
-      const h2 = (random(seedBase + 1) - 0.5) * rf * 0.5;
+      // Make the arrow tip feel sharper by using much less jitter than the shaft.
+      // (Default canvas roughness uses jittering for a hand-drawn feel, but the head can look too "blobby".)
+      const headJitterScale = 0.2;
+      const h1 = (random(seedBase) - 0.5) * rf * headJitterScale;
+      const h2 = (random(seedBase + 1) - 0.5) * rf * headJitterScale;
       ctx.moveTo(tipX, tipY);
       ctx.lineTo(tipX - headlen * Math.cos(angle - Math.PI / 7) + h1, tipY - headlen * Math.sin(angle - Math.PI / 7) + h1);
       ctx.moveTo(tipX, tipY);
@@ -605,7 +677,7 @@ export const shapes: Record<string, ShapeFunction> = {
     }
   },
 
-  diamond: ({ x1, y1, x2, y2, strokeWidth = 3, roughness = 1 }, ctx) => {
+  diamond: ({ x1, y1, x2, y2, borderRadius = 0, strokeWidth = 3, roughness = 1 }, ctx) => {
     const midX = x1 + (x2 - x1) / 2;
     const midY = y1 + (y2 - y1) / 2;
     const pts = [
@@ -615,33 +687,97 @@ export const shapes: Record<string, ShapeFunction> = {
       { x: x1, y: midY },  // left
     ];
     const random = seededRandom(coordSeed(x1, y1, x2, y2));
+    const { r: rEff, pin, pout } = diamondRoundedGeometry(pts, borderRadius);
+    const useRound = rEff > 0 && pin.length === 4;
 
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    if (roughness >= 2) {
-      const maxOff = Math.min(strokeWidth * 0.7, 3);
-
-      // Fill clean diamond
-      ctx.beginPath();
+    const drawCleanSharpDiamond = () => {
       ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.closePath();
-      ctx.fill();
+    };
 
-      for (let pass = 0; pass < CARTOON_PASSES; pass++) {
-        const po = pass * 100;
-        ctx.beginPath();
-        for (let side = 0; side < 4; side++) {
-          drawCartoonSegment(
-            ctx, pts[side].x, pts[side].y,
-            pts[(side + 1) % 4].x, pts[(side + 1) % 4].y,
-            (i) => random(po + i), maxOff, side * 20, side === 0
-          );
-        }
-        ctx.closePath();
-        ctx.stroke();
+    const drawCleanRoundedDiamond = () => {
+      ctx.moveTo(pin[0].x, pin[0].y);
+      for (let i = 0; i < 4; i++) {
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, pout[i].x, pout[i].y);
+        ctx.lineTo(pin[(i + 1) % 4].x, pin[(i + 1) % 4].y);
       }
+      ctx.closePath();
+    };
+
+    if (roughness >= 2) {
+      const maxOff = Math.min(strokeWidth * 0.7, 3);
+
+      if (useRound) {
+        ctx.beginPath();
+        drawCleanRoundedDiamond();
+        ctx.fill();
+
+        for (let pass = 0; pass < CARTOON_PASSES; pass++) {
+          const po = pass * 100;
+          const j = (base: number, idx: number) =>
+            base + (random(po + idx) - 0.5) * maxOff * 1.4;
+
+          ctx.beginPath();
+          ctx.moveTo(j(pin[0].x, 0), j(pin[0].y, 1));
+          for (let i = 0; i < 4; i++) {
+            const V = pts[i];
+            const ni = (i + 1) % 4;
+            ctx.quadraticCurveTo(
+              j(V.x, 10 + i * 20),
+              j(V.y, 11 + i * 20),
+              j(pout[i].x, 12 + i * 20),
+              j(pout[i].y, 13 + i * 20)
+            );
+            drawCartoonSegment(
+              ctx,
+              pout[i].x, pout[i].y,
+              pin[ni].x, pin[ni].y,
+              (idx) => random(po + idx),
+              maxOff,
+              i * 50,
+              false
+            );
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+      } else {
+        ctx.beginPath();
+        drawCleanSharpDiamond();
+        ctx.fill();
+
+        for (let pass = 0; pass < CARTOON_PASSES; pass++) {
+          const po = pass * 100;
+          ctx.beginPath();
+          for (let side = 0; side < 4; side++) {
+            drawCartoonSegment(
+              ctx, pts[side].x, pts[side].y,
+              pts[(side + 1) % 4].x, pts[(side + 1) % 4].y,
+              (i) => random(po + i), maxOff, side * 20, side === 0
+            );
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+    } else if (roughness > 0 && useRound) {
+      const rf = roughness * Math.min(strokeWidth * 0.3, 2);
+      ctx.beginPath();
+      ctx.moveTo(pin[0].x, pin[0].y);
+      for (let i = 0; i < 4; i++) {
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, pout[i].x, pout[i].y);
+        drawWobblySegment(
+          ctx,
+          pout[i].x, pout[i].y,
+          pin[(i + 1) % 4].x, pin[(i + 1) % 4].y,
+          random, rf, i * 10, false
+        );
+      }
+      ctx.closePath();
     } else if (roughness > 0) {
       const rf = roughness * Math.min(strokeWidth * 0.3, 2);
       ctx.beginPath();
@@ -655,9 +791,8 @@ export const shapes: Record<string, ShapeFunction> = {
       ctx.closePath();
     } else {
       ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.closePath();
+      if (useRound) drawCleanRoundedDiamond();
+      else drawCleanSharpDiamond();
     }
   },
 

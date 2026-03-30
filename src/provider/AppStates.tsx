@@ -45,14 +45,15 @@ const defaultAction: ActionType = "none";
 const defaultScaleOffset: ScaleOffset = { x: 0, y: 0 };
 const defaultSession: string | null = null;
 const defaultLockTool = false;
+const STYLE_STORAGE_KEY = "drawup-style";
 const defaultStyle: ElementStyle = {
   strokeWidth: 3,
   strokeColor: STROKE_COLORS[0],
   strokeStyle: STROKE_STYLES[0].slug,
   fill: BACKGROUND_COLORS[0],
   opacity: 100,
-  borderRadius: 0,
-  roughness: 1,
+  borderRadius: 15,
+  roughness: 0,
   arrowType: 'sharp',
   arrowheads: 'end',
   fontSize: 'M',
@@ -89,6 +90,21 @@ function readStoredActiveArchive(): ActiveArchiveDiagram | null {
   }
 }
 
+function readStoredStyle(): ElementStyle {
+  try {
+    const raw = localStorage.getItem(STYLE_STORAGE_KEY);
+    if (!raw) return defaultStyle;
+    const parsed = JSON.parse(raw) as Partial<ElementStyle>;
+    return {
+      ...defaultStyle,
+      ...parsed,
+      roughness: typeof parsed.roughness === "number" ? minmax(parsed.roughness, [0, 2]) : defaultStyle.roughness,
+    };
+  } catch {
+    return defaultStyle;
+  }
+}
+
 interface AppContextProviderProps {
   children: ReactNode;
 }
@@ -105,7 +121,7 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
   const [scale, setScale] = useState<number>(defaultScale);
   const [scaleOffset, setScaleOffset] = useState<ScaleOffset>(defaultScaleOffset);
   const [lockTool, setLockTool] = useState<boolean>(defaultLockTool);
-  const [style, setStyle] = useState<ElementStyle>(defaultStyle);
+  const [style, setStyle] = useState<ElementStyle>(readStoredStyle);
   const [elements, setElements, undo, redo, canUndo] = useHistory(initialElements, session);
 
   const [rerender, setRerender] = useState<boolean>(true);
@@ -138,6 +154,14 @@ export function AppContextProvider({ children }: AppContextProviderProps): JSX.E
       setSelectedElement(null);
     }
   }, [elements, session, selectedElement]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STYLE_STORAGE_KEY, JSON.stringify(style));
+    } catch {
+      // ignore style persistence issues and keep editing functional
+    }
+  }, [style]);
 
   const onZoom = (delta: number | "default"): void => {
     if (delta === "default") {

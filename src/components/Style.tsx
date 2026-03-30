@@ -124,11 +124,13 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
   const showRectRadius =
     styleTargetIds.length === 0
       ? selectedTool === "rectangle" ||
+        selectedTool === "diamond" ||
         (selectedTool === "arrow" && elementStyle.arrowType === "elbowed")
       : styleTargetIds.every((id) => {
           const e = getElementById(id, elements);
           return (
             e?.tool === "rectangle" ||
+            e?.tool === "diamond" ||
             (e?.tool === "arrow" && e.arrowType === "elbowed")
           );
         });
@@ -339,7 +341,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             title="Straight (Architect)"
             className={
               "itemButton option" +
-              ((elementStyle.roughness ?? 1) === 0 ? " selected" : "")
+              ((elementStyle.roughness ?? 0) === 0 ? " selected" : "")
             }
             onClick={() => {
               setStylesStates({ roughness: 0 });
@@ -365,7 +367,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             title="Hand-drawn (Artist)"
             className={
               "itemButton option" +
-              ((elementStyle.roughness ?? 1) === 1 ? " selected" : "")
+              ((elementStyle.roughness ?? 0) === 1 ? " selected" : "")
             }
             onClick={() => {
               setStylesStates({ roughness: 1 });
@@ -391,7 +393,7 @@ export default function Style({ selectedElement }: StyleProps): JSX.Element | nu
             title="Cartoonist"
             className={
               "itemButton option" +
-              ((elementStyle.roughness ?? 1) >= 2 ? " selected" : "")
+              ((elementStyle.roughness ?? 0) >= 2 ? " selected" : "")
             }
             onClick={() => {
               setStylesStates({ roughness: 2 });
