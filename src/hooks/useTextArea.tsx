@@ -98,14 +98,23 @@ export default function useTextArea(): (
       textarea.style.fontFamily = "Excalifont, cursive";
       textarea.style.lineHeight = "1.15";
 
+      // Match `drawShapeEmbeddedLabel` in helper/canvas.ts: vertical block is
+      // centered using lineHeight = px * 1.15, not by centering scrollHeight
+      // (which can sit a few pixels off and look higher than the canvas text).
       const syncEmbeddedLayout = (): void => {
         textarea.style.height = "auto";
         const maxH = host.clientHeight;
+        const lineHeightCanvas = fontPx * 1.15;
+        const logicalLines = textarea.value.split("\n");
+        const totalHCanvas = logicalLines.length * lineHeightCanvas;
+        const startY = Math.max(top, top + (h - totalHCanvas) / 2);
+        const topPx = Math.max(0, (startY - top) * scale);
+
         const minLine = fontPx * scale * 1.15;
         const sh = Math.max(textarea.scrollHeight, minLine);
-        const boxH = Math.min(sh, maxH);
+        const avail = Math.max(0, maxH - topPx);
+        const boxH = avail > 0 ? Math.min(sh, avail) : Math.min(sh, maxH);
         textarea.style.height = boxH + "px";
-        const topPx = Math.max(0, (maxH - boxH) / 2);
         textarea.style.top = topPx + "px";
       };
 
@@ -115,7 +124,11 @@ export default function useTextArea(): (
 
       requestAnimationFrame(() => {
         syncEmbeddedLayout();
-        if (update) textarea.setSelectionRange(0, textarea.value.length);
+        if (update) {
+          // Place caret in the middle for a more predictable edit experience.
+          const mid = Math.floor(textarea.value.length / 2);
+          textarea.setSelectionRange(mid, mid);
+        }
       });
 
       textarea.addEventListener("input", () => {
@@ -140,7 +153,11 @@ export default function useTextArea(): (
     document.body.appendChild(textarea);
     textarea.focus();
 
-    if (update) textarea.setSelectionRange(0, text.length);
+    if (update) {
+      // Place caret in the middle for a more predictable edit experience.
+      const mid = Math.floor(text.length / 2);
+      textarea.setSelectionRange(mid, mid);
+    }
 
     textarea.style.top = canvasToWindow(x1, y1).y + "px";
     textarea.style.left = canvasToWindow(x1, y1).x + "px";

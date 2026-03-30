@@ -143,6 +143,7 @@ export default function useCanvas(): UseCanvasReturn {
           fontSize: element.fontSize,
           textAlign: element.textAlign,
         },
+        true,
         true
       );
       setSelectedElement(null);
@@ -518,17 +519,21 @@ export default function useCanvas(): UseCanvasReturn {
       );
 
       if (lastElement.tool === "text" && "text" in lastElement) {
-        createTextArea({
-          id: lastElement.id,
-          x1: lastElement.x1,
-          y1: lastElement.y1,
-          x2: lastElement.x2,
-          y2: lastElement.y2,
-          text: lastElement.text ?? "",
-          strokeColor: lastElement.strokeColor,
-          fontSize: lastElement.fontSize,
-          textAlign: lastElement.textAlign,
-        });
+        createTextArea(
+          {
+            id: lastElement.id,
+            x1: lastElement.x1,
+            y1: lastElement.y1,
+            x2: lastElement.x2,
+            y2: lastElement.y2,
+            text: lastElement.text ?? "",
+            strokeColor: lastElement.strokeColor,
+            fontSize: lastElement.fontSize,
+            textAlign: lastElement.textAlign,
+          },
+          false,
+          true
+        );
       }
 
       if (!lockTool && lastElement.tool !== "pencil") {
