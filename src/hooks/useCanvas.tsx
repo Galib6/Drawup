@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { v4 as uuid } from "uuid";
 import {
   cornerCursor,
   draw,
@@ -90,6 +91,11 @@ export default function useCanvas(): UseCanvasReturn {
   const [resizeOldDementions, setResizeOldDementions] =
     useState<DrawElement | null>(null);
   const groupMoveStartRef = useRef<Map<string, DrawElement>>(new Map());
+  const moveDragStartRef = useRef<{
+    lastPosX: number;
+    lastPosY: number;
+    idsToMove: string[];
+  } | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{
     x1: number;
     y1: number;
@@ -221,6 +227,28 @@ export default function useCanvas(): UseCanvasReturn {
         if (event.altKey) {
           const offsetX = clientX - element.x1;
           const offsetY = clientY - element.y1;
+          const duplicatedId = uuid();
+          // Duplicate without shifting geometry; offsets are handled by the drag start.
+          const duplicatedPreview = {
+            ...moveElement(element as unknown as DrawElement, 0),
+            id: duplicatedId,
+          };
+          groupMoveStartRef.current = new Map([[duplicatedId, duplicatedPreview]]);
+          moveDragStartRef.current = {
+            lastPosX: clientX,
+            lastPosY: clientY,
+            idsToMove: [duplicatedId],
+          };
+
+          setSelectedIds([duplicatedId]);
+          setSelectedElement({
+            ...(duplicatedPreview as SelectedElement),
+            offsetX,
+            offsetY,
+            lastPosX: clientX,
+            lastPosY: clientY,
+          });
+          setAction("move");
           duplicateElement(
             element as SelectedElement,
             setElements as (
@@ -232,7 +260,8 @@ export default function useCanvas(): UseCanvasReturn {
               offsetX,
               offsetY,
             },
-            setSelectedIds
+            setSelectedIds,
+            duplicatedId
           );
           return;
         }
@@ -265,6 +294,11 @@ export default function useCanvas(): UseCanvasReturn {
         const offsetY = clientY - element.y1;
         setElements((prevState) => prevState);
         setMouseAction({ x: event.clientX, y: event.clientY });
+        moveDragStartRef.current = {
+          lastPosX: clientX,
+          lastPosY: clientY,
+          idsToMove: moveIds,
+        };
         setSelectedElement({
           ...element,
           offsetX,
@@ -368,10 +402,12 @@ export default function useCanvas(): UseCanvasReturn {
         elements,
         true
       );
-    } else if (action === "move" && selectedElement) {
-      const idsToMove =
-        selectedIds.length > 0 ? selectedIds : [selectedElement.id];
-      const { lastPosX = 0, lastPosY = 0 } = selectedElement;
+    } else if (action === "move") {
+      const moveStart = moveDragStartRef.current;
+      if (!moveStart) return;
+      const { lastPosX = 0, lastPosY = 0, idsToMove } = moveStart;
+      if (idsToMove.length === 0) return;
+
       const deltaX = clientX - lastPosX;
       const deltaY = clientY - lastPosY;
 
@@ -429,6 +465,9 @@ export default function useCanvas(): UseCanvasReturn {
     const prevAction = action;
     setAction("none");
     lockUI(false);
+    if (prevAction === "move") {
+      moveDragStartRef.current = null;
+    }
 
     if (
       prevAction === "draw" &&
