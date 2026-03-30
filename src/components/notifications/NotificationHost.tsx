@@ -5,6 +5,7 @@ import {
   removeNotification,
   subscribeNotifications,
   type AppNotificationItem,
+  type NotificationPlacement,
 } from "@/lib/notifications/store";
 
 function NotificationItem({ item }: { item: AppNotificationItem }): JSX.Element {
@@ -44,15 +45,30 @@ export function NotificationHost(): JSX.Element | null {
     () => getNotificationSnapshot(),
     () => getNotificationSnapshot()
   );
+  const placements: NotificationPlacement[] = ["top-center", "bottom-right"];
 
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="appNotificationStack" aria-live="polite">
-      {[...list].reverse().map((item) => (
-        <NotificationItem key={item.id} item={item} />
-      ))}
-    </div>,
+    <>
+      {placements.map((placement) => {
+        const itemsForPlacement = [...list]
+          .filter((item) => item.placement === placement)
+          .reverse();
+        if (!itemsForPlacement.length) return null;
+        return (
+          <div
+            key={placement}
+            className={`appNotificationStack appNotificationStack--${placement}`}
+            aria-live="polite"
+          >
+            {itemsForPlacement.map((item) => (
+              <NotificationItem key={item.id} item={item} />
+            ))}
+          </div>
+        );
+      })}
+    </>,
     document.body
   );
 }

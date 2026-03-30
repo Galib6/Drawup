@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 
 export type NotificationVariant = "success" | "error" | "info" | "warning" | "loading";
+export type NotificationPlacement = "top-center" | "bottom-right";
 
 export type AppNotificationItem = {
   id: string;
   variant: NotificationVariant;
   message: string;
   durationMs: number;
+  placement: NotificationPlacement;
   icon?: ReactNode;
 };
 
@@ -31,10 +33,20 @@ function genId(): string {
 }
 
 export function pushNotification(
-  partial: Omit<AppNotificationItem, "id"> & { id?: string }
+  partial: Omit<AppNotificationItem, "id" | "placement"> & {
+    id?: string;
+    placement?: NotificationPlacement;
+  }
 ): string {
   const id = partial.id ?? genId();
-  items = [...items, { ...partial, id }];
+  items = [
+    ...items,
+    {
+      ...partial,
+      id,
+      placement: partial.placement ?? "bottom-right",
+    },
+  ];
   emit();
   return id;
 }

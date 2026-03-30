@@ -1,9 +1,11 @@
 import { SaveIcon } from "../assets/icons";
+import { useAuthSession } from "@components/auth/lib/utils";
 import { useCanvasSaveAction } from "../hooks/useCanvasSaveAction";
 import { useAppContext } from "../provider/AppStates";
 
 export default function ToolBar(): JSX.Element {
   const { tools: toolCols, selectedTool, lockTool } = useAppContext();
+  const { isAuthenticate: isLoggedIn } = useAuthSession();
   const { save, busy: saveBusy, disabled: saveDisabled } = useCanvasSaveAction();
 
   return (
@@ -27,19 +29,21 @@ export default function ToolBar(): JSX.Element {
           ))}
         </div>
       ))}
-      <div>
-        <button
-          className="toolbutton toolbarSave"
-          type="button"
-          title="Save (Ctrl+S when a diagram is open)"
-          aria-label="Save"
-          aria-busy={saveBusy}
-          disabled={saveDisabled}
-          onClick={() => void save()}
-        >
-          <SaveIcon />
-        </button>
-      </div>
+      {isLoggedIn && (
+        <div>
+          <button
+            className="toolbutton toolbarSave"
+            type="button"
+            title="Save (Ctrl+S when a diagram is open)"
+            aria-label="Save"
+            aria-busy={saveBusy}
+            disabled={saveDisabled}
+            onClick={() => void save()}
+          >
+            <SaveIcon />
+          </button>
+        </div>
+      )}
     </section>
   );
 }

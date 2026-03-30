@@ -174,6 +174,11 @@ export default function useCanvas(): UseCanvasReturn {
     const { clientX, clientY } = mousePosition(event);
     lockUI(true);
 
+    // Right click should not start draw/select; use it to pan.
+    if (event.button === 2) {
+      event.preventDefault();
+    }
+
     if (inCorner && selectedIds.length <= 1) {
       setResizeOldDementions(
         getElementById(selectedElement?.id, elements) || null
@@ -187,13 +192,24 @@ export default function useCanvas(): UseCanvasReturn {
       return;
     }
 
-    if (keys.has(" ") || selectedTool === "hand" || event.button === 1) {
+    if (
+      keys.has(" ") ||
+      selectedTool === "hand" ||
+      event.button === 1 ||
+      event.button === 2
+    ) {
       setTranslate((prevState) => ({
         ...prevState,
         sx: clientX,
         sy: clientY,
       }));
       setAction("translate");
+      return;
+    }
+
+    // Ignore non-primary buttons for selection/drawing behavior.
+    if (event.button !== 0) {
+      lockUI(false);
       return;
     }
 
@@ -518,6 +534,12 @@ export default function useCanvas(): UseCanvasReturn {
       x: prevState.x - event.deltaX,
       y: prevState.y - event.deltaY,
     }));
+  };
+
+  const handleContextMenu = (
+    event: React.MouseEvent<HTMLCanvasElement>
+  ): void => {
+    event.preventDefault();
   };
 
   useLayoutEffect(() => {
@@ -867,6 +889,7 @@ export default function useCanvas(): UseCanvasReturn {
     handleMouseUp,
     handleWheel,
     handleDoubleClick,
+    handleContextMenu,
     dimension,
   };
 }

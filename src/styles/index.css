@@ -66,18 +66,28 @@ body {
   outline: none;
 }
 
-/* In-app notifications (custom stack, bottom-right) */
+/* In-app notifications (custom stack, position by placement) */
 .appNotificationStack {
   position: fixed;
   z-index: 100000;
-  right: 20px;
-  bottom: 20px;
   display: flex;
   flex-direction: column-reverse;
-  align-items: flex-end;
   gap: 10px;
   max-width: min(420px, calc(100vw - 40px));
   pointer-events: none;
+}
+
+.appNotificationStack--bottom-right {
+  right: 20px;
+  bottom: 20px;
+  align-items: flex-end;
+}
+
+.appNotificationStack--top-center {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
 }
 
 .appNotification {
@@ -88,6 +98,7 @@ body {
   border: 1px solid rgba(15, 23, 42, 0.08);
   background: #fff;
   color: var(--primary-color);
+  width: min(420px, calc(100vw - 40px));
 }
 
 @keyframes appNotificationIn {

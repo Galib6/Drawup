@@ -7,6 +7,10 @@ import { cookies } from "@lib/utils/cookies";
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import type { IBaseResponse } from "@base/interfaces/interfaces";
 
+function isAuthPath(pathname: string): boolean {
+  return pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
+}
+
 export const AxiosInstance = axios.create({
   baseURL: ENV.apiUrl,
   timeout: 15000,
@@ -37,9 +41,11 @@ AxiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
     if (error.response.data?.success === false) {
+      const placement = isAuthPath(window.location.pathname) ? "top-center" : undefined;
       error.response.data.errorMessages?.forEach((x) => {
-        appToast.error(x);
+        appToast.error(x, { placement });
       });
+      (error as AxiosError & { __appToastHandled?: boolean }).__appToastHandled = true;
     }
     return Promise.reject(error);
   },

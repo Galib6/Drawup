@@ -9,6 +9,7 @@ export default function Canvas(): JSX.Element {
     handleMouseUp,
     handleWheel,
     handleDoubleClick,
+    handleContextMenu,
   } = useCanvas();
 
   return (
@@ -23,6 +24,7 @@ export default function Canvas(): JSX.Element {
       onMouseUp={handleMouseUp}
       onWheel={handleWheel}
       onDoubleClick={handleDoubleClick}
+      onContextMenu={handleContextMenu}
     />
   );
 }

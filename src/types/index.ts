@@ -237,5 +237,6 @@ export interface UseCanvasReturn {
   handleMouseUp: (event: React.MouseEvent<HTMLCanvasElement>) => void;
   handleWheel: (event: React.WheelEvent<HTMLCanvasElement>) => void;
   handleDoubleClick: (event: React.MouseEvent<HTMLCanvasElement>) => void;
+  handleContextMenu: (event: React.MouseEvent<HTMLCanvasElement>) => void;
   dimension: Dimension;
 }

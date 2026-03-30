@@ -3,6 +3,10 @@ import { AxiosError } from 'axios';
 import { appToast } from '@/lib/appToast';
 
 type PromiseValue<T> = T extends Promise<infer R> ? R : T;
+type ToastHandledError = Error & { __appToastHandled?: boolean };
+function isAuthPath(pathname: string): boolean {
+  return pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,12 +18,20 @@ export const queryClient = new QueryClient({
   },
   queryCache: new QueryCache({
     onError: (error: Error) => {
-      appToast.error(error?.message || "Something went wrong");
+      if ((error as ToastHandledError).__appToastHandled) return;
+      const placement = typeof window !== "undefined" && isAuthPath(window.location.pathname)
+        ? "top-center"
+        : undefined;
+      appToast.error(error?.message || "Something went wrong", { placement });
     },
   }),
   mutationCache: new MutationCache({
     onError: (error: Error) => {
-      appToast.error(error?.message || "Something went wrong");
+      if ((error as ToastHandledError).__appToastHandled) return;
+      const placement = typeof window !== "undefined" && isAuthPath(window.location.pathname)
+        ? "top-center"
+        : undefined;
+      appToast.error(error?.message || "Something went wrong", { placement });
     },
   }),
 });
